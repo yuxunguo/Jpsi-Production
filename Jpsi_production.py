@@ -1,6 +1,8 @@
 import numpy as np
 from iminuit import Minuit
 from scipy.integrate import quad
+import pandas as pd
+import time
 
 Mproton = 0.938
 MJpsi = 3.097
@@ -58,10 +60,10 @@ C0Lat = -1
 MCLat = 0.48
 
 def FormFactors(t: float, A0: float, Mpole: float):
-    return A0/(1 - t / (Mpole ** 2)) ** 2
+    return A0/(1 - t / (Mpole ** 2)) ** 3
 
 def G2(W: float, t: float, A0: float, MA: float, C0: float, MC: float): 
-    return Xi(W ,t) ** (-4) * ((1- t/ (4 * Mproton ** 2))* FormFactors(t, C0, MC) ** 2 * (4 * Xi(W ,t) ** 2) ** 2 + 2* FormFactors(t, A0, MA) * FormFactors(t, C0, MC)*4 * Xi(W ,t) ** 2 + (1- Xi(W ,t) ** 2) * FormFactors(t,A0,MA) **2)
+    return 4* Xi(W ,t) ** (-4) * ((1- t/ (4 * Mproton ** 2))* FormFactors(t, C0, MC) ** 2 * (4 * Xi(W ,t) ** 2) ** 2 + 2* FormFactors(t, A0, MA) * FormFactors(t, C0, MC)*4 * Xi(W ,t) ** 2 + (1- Xi(W ,t) ** 2) * FormFactors(t,A0,MA) **2)
 
 def dsigma(W: float, t: float, A0: float, MA: float, C0: float, MC: float):
     return 1/conv * alphaEM * (2/3) **2 /(4* (W ** 2 - Mproton ** 2) ** 2) * (16 * np.pi * alphaS)** 2/ (3 * MJpsi ** 3) * psi2 * G2(W, t, A0, MA, C0, MC)
@@ -69,29 +71,81 @@ def dsigma(W: float, t: float, A0: float, MA: float, C0: float, MC: float):
 def sigma(W: float, A0: float, MA: float, C0: float, MC: float):
     return quad(lambda u: dsigma(W, u, A0, MA, C0, MC), tmin(W), tmax(W))[0]
 
-GlueXsigmaCSV = open("GlueX_Total_xsection.csv")
-GlueXsigma = np.loadtxt(GlueXsigmaCSV, delimiter=",")
-GlueXdsigmaCSV = open("GlueX_differential_xsection.csv")
-GlueXdsigma = np.loadtxt(GlueXdsigmaCSV, delimiter=",")
+def WEb(Eb: float):
+    return np.sqrt(Mproton)*np.sqrt(Mproton + 2 * Eb)
+
+#Read the csv into dataframe using pandas
+dsigmadata = pd.read_csv("2022-final-xsec-electron-channel_total.csv")
+# Not fitting the total cross-sections but I imported anyway
+totsigmadata = pd.read_csv("GlueX_tot_combined.csv")
+
+# Taking out the column that we needed
+avg_E_col_dsigma=dsigmadata['avg_E'].to_numpy()
+avg_abs_t_col_dsigma = dsigmadata['avg_abs_t'].to_numpy()
+dsdt_nb_col_dsigma = dsigmadata['dsdt_nb'].to_numpy()
+tot_error_col_dsigma = dsigmadata['tot_error'].to_numpy()
+
+# Calculate the W in terms of the beam energy for the whole array
+avg_W_col_dsigma = WEb(avg_E_col_dsigma)
+
+# Creat a 2d array shape (N,4) with each row (W,|t|,dsigma,dsigma_err)
+dsigmadata_reshape = np.column_stack((avg_W_col_dsigma, avg_abs_t_col_dsigma, dsdt_nb_col_dsigma, tot_error_col_dsigma))
+
+# We want to select all the data with xi > xi_thres, here I put xi_thres = 0.5 to be consist with the paper
+xi_thres = 0.5
+# calculate the xi for each row/data point
+xi_col_dsigma = Xi(avg_W_col_dsigma, -avg_abs_t_col_dsigma)
+# Creat a mask that the condition is met
+mask = xi_col_dsigma>=xi_thres 
+# Select the data with the mas
+dsigmadata_select = dsigmadata_reshape[mask]
+# only 33 data left with xi>0.5
+print(dsigmadata_select.shape[0])
+
+#
+# The same thing for the total cross-sections (Not fitted)
+#
+# Taking out the column that we needed
+avg_E_col_sigma = totsigmadata['E_avg'].to_numpy()
+sigma_col_sigma = totsigmadata['sigma'].to_numpy()
+sigma_err_col_sigma = totsigmadata['sigma_err'].to_numpy()
+
+# Calculate the W in terms of the beam energy for the whole array
+avg_W_col_sigma = WEb(avg_E_col_sigma)
+
+# Creat a 2d array shape (N,3) with each row (W,dsigma,dsigma_err)
+totsigmadata_reshape =  np.column_stack((avg_W_col_sigma,sigma_col_sigma,sigma_err_col_sigma))
 
 def chi2(A0: float, MA: float, C0: float, MC: float):
 
-    sigma_pred = list(map(lambda W: sigma(W, A0, MA, C0, MC), GlueXsigma[:,0]))
-    chi2sigma = np.sum(((sigma_pred - GlueXsigma[:,2]) / GlueXsigma[:,3]) **2 )
-    Wdsigma = 4.58
-    dsigma_pred = list(map(lambda t: dsigma(Wdsigma, - t, A0, MA, C0, MC), GlueXdsigma[:,0]))
-    chi2dsigma = np.sum(((dsigma_pred - GlueXdsigma[:,2]) / GlueXdsigma[:,3]) **2 )
-    return chi2sigma + chi2dsigma
+    #sigma_pred = list(map(lambda W: sigma(W, A0, MA, C0, MC), totsigmadata_reshape[:,0]))
+    #chi2sigma = np.sum(((sigma_pred - totsigmadata_reshape[:,1]) / totsigmadata_reshape[:,2]) **2 )
 
-m = Minuit(chi2, A0 = A0Lat, MA = MALat, C0 = C0Lat ,MC = MCLat)
+    #Two variables Wt[0] = W, Wt[1] = |t| = -t
+    dsigma_pred=list(map(lambda Wt: dsigma(Wt[0], -Wt[1], A0, MA, C0, MC), zip(dsigmadata_select[:,0], dsigmadata_select[:,1])))
+    chi2dsigma = np.sum(((dsigma_pred - dsigmadata_select[:,2]) / dsigmadata_select[:,3]) **2 )
+    return chi2dsigma #+ chi2sigma
+
+time_start = time.time()
+
+A0pdf = 0.414
+m = Minuit(chi2, A0 = A0pdf, MA = MALat, C0 = C0Lat ,MC = MCLat)
 m.errordef = 1
+#m.fixed["A0"] = True
+#m.fixed["MC"] = True
 m.fixed["A0"] = True
-m.fixed["MC"] = True
+m.limits["C0"] = (-20,20)
 m.migrad()
 m.hesse()
 
-print(m.values)
+ndof = dsigmadata_select.shape[0]  - m.nfit  # + totsigmadata_reshape.shape[0]
 
-print(m.errors)
+time_end = time.time() -time_start
 
-print(m.params)
+with open('FitOutput.txt', 'w', encoding='utf-8', newline='') as f:
+    print('Total running time: %.1f minutes. Total call of cost function: %3d.\n' % ( time_end/60, m.nfcn), file=f)
+    print('The chi squared/d.o.f. is: %.2f / %3d ( = %.2f ).\n' % (m.fval, ndof, m.fval/ndof), file = f)
+    print('Below are the final output parameters from iMinuit:', file = f)
+    print(*m.values, sep=", ", file = f)
+    print(*m.errors, sep=", ", file = f)
+    print(m.params, file = f)
