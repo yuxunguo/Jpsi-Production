@@ -1,8 +1,11 @@
 import numpy as np
 from iminuit import Minuit
 from scipy.integrate import quad
+from Evolution import Evo_WilsonCoef_SG
 import pandas as pd
 import time
+
+NF=4
 
 Mproton = 0.938
 MJpsi = 3.097
@@ -126,6 +129,8 @@ def chi2(A0: float, MA: float, C0: float, MC: float):
     chi2dsigma = np.sum(((dsigma_pred - dsigmadata_select[:,2]) / dsigmadata_select[:,3]) **2 )
     return chi2dsigma #+ chi2sigma
 
+
+'''
 time_start = time.time()
 
 A0pdf = 0.414
@@ -149,3 +154,4 @@ with open('FitOutput.txt', 'w', encoding='utf-8', newline='') as f:
     print(*m.values, sep=", ", file = f)
     print(*m.errors, sep=", ", file = f)
     print(m.params, file = f)
+'''
