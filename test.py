@@ -1,8 +1,10 @@
-from Evolution import Evo_WilsonCoef_SG, M_jpsi
+from Evolution import Evo_WilsonCoef_SG, M_jpsi, AlphaS
 import numpy as np
 import csv
 
 NF = 4
+
+#print(AlphaS(2,NF,M_jpsi/2))
 
 mulst = np.linspace(0.65,2,60) * M_jpsi/2
 

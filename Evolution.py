@@ -769,8 +769,8 @@ def Evo_WilsonCoef_SG(mu: float,nf: int, p: int =1):
     alphaS = AlphaS(nloop_alphaS, nf, mu)        
     
     m_charm = M_jpsi/2      
-    cq1 = -0.369
-    cg1 = 0.891
+    cg1 = -0.369
+    cq1 = 0.891
     
     evola0, evola1_diag = Evo_SG_NLO(j0,nf,p,mu)
     
