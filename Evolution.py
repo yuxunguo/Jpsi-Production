@@ -754,13 +754,14 @@ def Evo_SG_NLO(j: np.array, nf: int, p: int, mu: float) -> np.array:
     
     return evola0, evola1_diag
 
-def Evo_WilsonCoef_SG(mu: float,nf: int, p: int =1):
+def Evo_WilsonCoef_SG(mu: float,nf: int, p:int = 1, p_order: int =1):
     """Return evolved Wilson Coefficient at j=1
 
     Args:
         mu (float): scale evolved to, initial scale=M_jpsi/2
         nf (int): number of effective fermion =4 for u d s c
         p (int): p=1 for vector-like
+        p_order (int): 1 for LO, 2 for NLO, 3 for partially NNLO (including the C^{NLO} E^{NLO} term)
 
     Returns:
         (C_Sigma, C_G) at j=0: Evolve Wilson Coefficient 
@@ -785,9 +786,17 @@ def Evo_WilsonCoef_SG(mu: float,nf: int, p: int =1):
     CWj0gNLO = alphaS * (cg1 - 55/16/np.pi * 2 * log(m_charm/mu))
     CWj0NLO = [CWj0qNLO, CWj0gNLO]
     
-    CWevo1 = alphaS * np.einsum('ij,j->i',evola0+evola1_diag,CWj0LO)\
+    CWevo0 = alphaS * np.einsum('ij,j->i',evola0,CWj0LO)
+    
+    CWevo1 = alphaS * np.einsum('ij,j->i',evola1_diag,CWj0LO)\
             + alphaS * np.einsum('ij,j->i',evola0,CWj0NLO)
     
     CWevo2 =  alphaS * np.einsum('ij,j->i',evola1_diag,CWj0NLO)
     
-    return CWevo1 + CWevo2
+    if(p_order == 1):
+        return CWevo0
+    if(p_order == 2):
+        return CWevo0 + CWevo1
+    if(p_order == 3):
+        return CWevo0 + CWevo1 + CWevo2
+
