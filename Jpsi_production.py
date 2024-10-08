@@ -1,7 +1,7 @@
 import numpy as np
 from iminuit import Minuit
 from scipy.integrate import quad
-from Evolution import Evo_WilsonCoef_SG
+from Evolution import Evo_WilsonCoef_SG,AlphaS
 import pandas as pd
 import time
 
@@ -9,6 +9,7 @@ NF=4
 
 Mproton = 0.938
 MJpsi = 3.097
+Mcharm = MJpsi/2
 alphaEM = 1/133
 alphaS = 0.30187
 psi2 = 1.0952 /(4 * np.pi)
@@ -42,8 +43,6 @@ def DeltaPlus2(W: float, t: float):
 def Xi(W: float, t: float):
     return (PPlus(W) - PprimePlus(W,t))/(PPlus(W) + PprimePlus(W,t))
 
-"""
-# Later MIT lattice result with tripole parameterizations
 
 A0Lat = 0.429
 MALat = 1.64
@@ -53,20 +52,30 @@ MCLat = 1.07
 def FormFactors(t: float, A0: float, Mpole: float):
     return A0/(1 - t / (Mpole ** 2)) ** 3
 
-"""
+def Hq_CFF(t: float, A0: float, MA: float, C0: float, MC: float, xi: float, p_order =1):
+    CWS, CWG = Evo_WilsonCoef_SG(Mcharm,NF,p_order)
+    Aformfact = FormFactors(t,A0,MA)
+    Cformfact = FormFactors(t,C0,MC)
+    Hformfact= Aformfact  + 4* xi**2 Cformfact
+    return 0
 
-# Earlier MIT lattice result with dipole parameterizations
+def Eq_CFF(t: float, C0: float, MC: float, xi: float, p_order =1):
+    CWS, CWG = Evo_WilsonCoef_SG(Mcharm,NF,p_order)
+    
+    return 0
 
-A0Lat = 0.58
-MALat = 1.13
-C0Lat = -1
-MCLat = 0.48
+def Hg_CFF(t: float, A0: float, MA: float, C0: float, MC: float, xi: float, p_order =1):
+    CWS, CWG = Evo_WilsonCoef_SG(Mcharm,NF,p_order)
+    
+    return 0
 
-def FormFactors(t: float, A0: float, Mpole: float):
-    return A0/(1 - t / (Mpole ** 2)) ** 3
+def Eg_CFF(t: float, C0: float, MC: float, xi: float, p_order =1):
+    CWS, CWG = Evo_WilsonCoef_SG(Mcharm,NF,p_order)
+    
+    return 0
 
 def G2(W: float, t: float, A0: float, MA: float, C0: float, MC: float): 
-    return 4* Xi(W ,t) ** (-4) * ((1- t/ (4 * Mproton ** 2))* FormFactors(t, C0, MC) ** 2 * (4 * Xi(W ,t) ** 2) ** 2 + 2* FormFactors(t, A0, MA) * FormFactors(t, C0, MC)*4 * Xi(W ,t) ** 2 + (1- Xi(W ,t) ** 2) * FormFactors(t,A0,MA) **2)
+    return (5/4)** 2 * 4* Xi(W ,t) ** (-4) * ((1- t/ (4 * Mproton ** 2))* FormFactors(t, C0, MC) ** 2 * (4 * Xi(W ,t) ** 2) ** 2 + 2* FormFactors(t, A0, MA) * FormFactors(t, C0, MC)*4 * Xi(W ,t) ** 2 + (1- Xi(W ,t) ** 2) * FormFactors(t,A0,MA) **2)
 
 def dsigma(W: float, t: float, A0: float, MA: float, C0: float, MC: float):
     return 1/conv * alphaEM * (2/3) **2 /(4* (W ** 2 - Mproton ** 2) ** 2) * (16 * np.pi * alphaS)** 2/ (3 * MJpsi ** 3) * psi2 * G2(W, t, A0, MA, C0, MC)
@@ -77,6 +86,9 @@ def sigma(W: float, A0: float, MA: float, C0: float, MC: float):
 def WEb(Eb: float):
     return np.sqrt(Mproton)*np.sqrt(Mproton + 2 * Eb)
 
+print(dsigma(4.58,-2,A0Lat,MALat,C0Lat,MCLat)/alphaS**2 * AlphaS(2,NF,Mcharm)**2)
+
+'''
 #Read the csv into dataframe using pandas
 dsigmadata = pd.read_csv("2022-final-xsec-electron-channel_total.csv")
 # Not fitting the total cross-sections but I imported anyway
@@ -128,7 +140,7 @@ def chi2(A0: float, MA: float, C0: float, MC: float):
     dsigma_pred=list(map(lambda Wt: dsigma(Wt[0], -Wt[1], A0, MA, C0, MC), zip(dsigmadata_select[:,0], dsigmadata_select[:,1])))
     chi2dsigma = np.sum(((dsigma_pred - dsigmadata_select[:,2]) / dsigmadata_select[:,3]) **2 )
     return chi2dsigma #+ chi2sigma
-
+'''
 
 '''
 time_start = time.time()
