@@ -137,7 +137,6 @@ FormFactors(-minus_t[0], Ag0, MAg) # = Ag(t0)
 4 * FormFactors(-minus_t_D[0], Cg0, MCg) # = Dg(t0)
 '''
 
-
 print(dsigma(4.58,-2,Ag0,MAg,Cg0,MCg)/alphaS**2 * AlphaS(2,NF,Mcharm)**2)
 
 print(dsigma_New(4.58,-2,Ag0, MAg ,Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order = 2))
