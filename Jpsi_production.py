@@ -46,10 +46,7 @@ def Xi(W: float, t: float):
 def WEb(Eb: float):
     return np.sqrt(Mproton)*np.sqrt(Mproton + 2 * Eb)
 
-A0Lat = 0.429
-MALat = 1.64
-C0Lat = -1.93 /4
-MCLat = 1.07
+
 
 def FormFactors(t: float, A0: float, Mpole: float):
     return A0/(1 - t / (Mpole ** 2)) ** 3
@@ -68,9 +65,9 @@ def ComptonFormFactors(t: float, A0: float, MA: float, C0: float, MC: float, xi:
 def G2_New(W: float, t: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, P_order = 1): 
     xi = Xi(W ,t)
     [gHCFF, gECFF] = 2*ComptonFormFactors(t, Ag0, MAg, Cg0, MCg, xi) / xi ** 2
-    [qHCFF, qECFF] = 0*2*ComptonFormFactors(t, Aq0, MAq, Cq0, MCq, xi) / xi ** 2
+    [qHCFF, qECFF] = 2*ComptonFormFactors(t, Aq0, MAq, Cq0, MCq, xi) / xi ** 2
     
-    CWS, CWG = Evo_WilsonCoef_SG(Mcharm,NF,p = 1,p_order= P_order)
+    CWS, CWG = np.real(Evo_WilsonCoef_SG(Mcharm,NF,p = 1,p_order= P_order))
     
     HCFF = CWG * gHCFF + CWS * qHCFF
     ECFF = CWG * gECFF + CWS * qECFF
@@ -92,10 +89,58 @@ def dsigma(W: float, t: float, A0: float, MA: float, C0: float, MC: float):
 def sigma(W: float, A0: float, MA: float, C0: float, MC: float):
     return quad(lambda u: dsigma(W, u, A0, MA, C0, MC), tmin(W), tmax(W))[0]
 
+Ag0 = 0.501
+MAg = 1.5
+Cg0 = -2.57 /4
+MCg = 1.5
 
-print(dsigma(4.58,-2,A0Lat,MALat,C0Lat,MCLat)/alphaS**2 * AlphaS(2,NF,Mcharm)**2)
+Aq0 = 0.510
+MAq = 1
+Cq0 = -1.30/4
+MCq = 1
 
-print(dsigma_New(4.58,-2,A0Lat,MALat,C0Lat,MCLat, 1,1,1,1))
+minus_t = np.array(np.load('Lattice Data/minus_t.npy'))
+minus_t_D = minus_t[1:]
+
+AgDg_mean = np.load('Lattice Data/AgDg_mean.npy')
+Ag_mean = AgDg_mean[:34]
+Ag_data = np.column_stack((minus_t,Ag_mean))
+
+Dg_mean = AgDg_mean[34:]
+Dg_data = np.column_stack((minus_t_D,Dg_mean))
+
+AqDq_mean = np.load('Lattice Data/AqDq_mean.npy')
+Aq_mean = AqDq_mean[:34]
+Aq_data = np.column_stack((minus_t,Aq_mean))
+Dq_mean = AqDq_mean[34:]
+Dq_data = np.column_stack((minus_t_D,Dq_mean))
+
+AgDg_cov = np.load('Lattice Data/AgDg_cov.npy')
+
+AqDq_cov = np.load('Lattice Data/AqDq_cov.npy')
+
+print(FormFactors(-minus_t, Aq0, MAq)) # = Aq(t0)
+print(Aq_mean)
+
+print(4*FormFactors(-minus_t_D, Cq0, MCq)) # = Dq(t0)
+print(Dq_mean)
+
+print(FormFactors(-minus_t, Ag0, MAg)) # = Ag(t0)
+print(Ag_mean)
+
+print(4*FormFactors(-minus_t_D, Cg0, MCg)) # = Dg(t0)
+print(Dg_mean)
+'''
+4 * FormFactors(-minus_t_D[0], Cq0, MCq) # = Dq(-t0)
+print(Dq_mean[0])
+FormFactors(-minus_t[0], Ag0, MAg) # = Ag(t0)
+4 * FormFactors(-minus_t_D[0], Cg0, MCg) # = Dg(t0)
+'''
+
+
+print(dsigma(4.58,-2,Ag0,MAg,Cg0,MCg)/alphaS**2 * AlphaS(2,NF,Mcharm)**2)
+
+print(dsigma_New(4.58,-2,Ag0, MAg ,Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order = 2))
 
 '''
 #Read the csv into dataframe using pandas
