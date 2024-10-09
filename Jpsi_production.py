@@ -43,6 +43,8 @@ def DeltaPlus2(W: float, t: float):
 def Xi(W: float, t: float):
     return (PPlus(W) - PprimePlus(W,t))/(PPlus(W) + PprimePlus(W,t))
 
+def WEb(Eb: float):
+    return np.sqrt(Mproton)*np.sqrt(Mproton + 2 * Eb)
 
 A0Lat = 0.429
 MALat = 1.64
@@ -90,12 +92,11 @@ def dsigma(W: float, t: float, A0: float, MA: float, C0: float, MC: float):
 def sigma(W: float, A0: float, MA: float, C0: float, MC: float):
     return quad(lambda u: dsigma(W, u, A0, MA, C0, MC), tmin(W), tmax(W))[0]
 
-def WEb(Eb: float):
-    return np.sqrt(Mproton)*np.sqrt(Mproton + 2 * Eb)
 
 print(dsigma(4.58,-2,A0Lat,MALat,C0Lat,MCLat)/alphaS**2 * AlphaS(2,NF,Mcharm)**2)
 
 print(dsigma_New(4.58,-2,A0Lat,MALat,C0Lat,MCLat, 1,1,1,1))
+
 '''
 #Read the csv into dataframe using pandas
 dsigmadata = pd.read_csv("2022-final-xsec-electron-channel_total.csv")
