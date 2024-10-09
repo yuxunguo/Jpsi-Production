@@ -46,8 +46,6 @@ def Xi(W: float, t: float):
 def WEb(Eb: float):
     return np.sqrt(Mproton)*np.sqrt(Mproton + 2 * Eb)
 
-
-
 def FormFactors(t: float, A0: float, Mpole: float):
     return A0/(1 - t / (Mpole ** 2)) ** 3
 
