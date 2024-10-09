@@ -52,27 +52,34 @@ MCLat = 1.07
 def FormFactors(t: float, A0: float, Mpole: float):
     return A0/(1 - t / (Mpole ** 2)) ** 3
 
-def Hq_CFF(t: float, A0: float, MA: float, C0: float, MC: float, xi: float, p_order =1):
-    CWS, CWG = Evo_WilsonCoef_SG(Mcharm,NF,p_order)
+def ComptonFormFactors(t: float, A0: float, MA: float, C0: float, MC: float, xi: float):
+
     Aformfact = FormFactors(t,A0,MA)
     Cformfact = FormFactors(t,C0,MC)
-    Hformfact= Aformfact  + 4* xi**2 Cformfact
-    return 0
-
-def Eq_CFF(t: float, C0: float, MC: float, xi: float, p_order =1):
-    CWS, CWG = Evo_WilsonCoef_SG(Mcharm,NF,p_order)
+    Bformfact = 0
     
-    return 0
-
-def Hg_CFF(t: float, A0: float, MA: float, C0: float, MC: float, xi: float, p_order =1):
-    CWS, CWG = Evo_WilsonCoef_SG(Mcharm,NF,p_order)
+    Hformfact = Aformfact + 4 * xi**2 * Cformfact
+    Eformfact = Bformfact - 4 * xi**2 * Cformfact
     
-    return 0
+    return np.array([Hformfact, Eformfact])
 
-def Eg_CFF(t: float, C0: float, MC: float, xi: float, p_order =1):
-    CWS, CWG = Evo_WilsonCoef_SG(Mcharm,NF,p_order)
+def G2_New(W: float, t: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, P_order = 1): 
+    xi = Xi(W ,t)
+    [gHCFF, gECFF] = 2*ComptonFormFactors(t, Ag0, MAg, Cg0, MCg, xi) / xi ** 2
+    [qHCFF, qECFF] = 0*2*ComptonFormFactors(t, Aq0, MAq, Cq0, MCq, xi) / xi ** 2
     
-    return 0
+    CWS, CWG = Evo_WilsonCoef_SG(Mcharm,NF,p = 1,p_order= P_order)
+    
+    HCFF = CWG * gHCFF + CWS * qHCFF
+    ECFF = CWG * gECFF + CWS * qECFF
+    
+    return (1-xi ** 2) * (HCFF + ECFF) ** 2 - 2 * ECFF * (HCFF+ECFF) + (1- t/ (4 * Mproton ** 2))* ECFF ** 2
+
+def dsigma_New(W: float, t: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, P_order = 1):
+    return 1/conv * alphaEM * (2/3) **2 /(4* (W ** 2 - Mproton ** 2) ** 2) * (16 * np.pi) ** 2/ (3 * MJpsi ** 3) * psi2 * G2_New(W, t, Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order)
+
+def sigma_New(W: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, P_order = 1):
+    return quad(lambda u: dsigma(W, u, Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order), tmin(W), tmax(W))[0]
 
 def G2(W: float, t: float, A0: float, MA: float, C0: float, MC: float): 
     return (5/4)** 2 * 4* Xi(W ,t) ** (-4) * ((1- t/ (4 * Mproton ** 2))* FormFactors(t, C0, MC) ** 2 * (4 * Xi(W ,t) ** 2) ** 2 + 2* FormFactors(t, A0, MA) * FormFactors(t, C0, MC)*4 * Xi(W ,t) ** 2 + (1- Xi(W ,t) ** 2) * FormFactors(t,A0,MA) **2)
@@ -88,6 +95,7 @@ def WEb(Eb: float):
 
 print(dsigma(4.58,-2,A0Lat,MALat,C0Lat,MCLat)/alphaS**2 * AlphaS(2,NF,Mcharm)**2)
 
+print(dsigma_New(4.58,-2,A0Lat,MALat,C0Lat,MCLat, 1,1,1,1))
 '''
 #Read the csv into dataframe using pandas
 dsigmadata = pd.read_csv("2022-final-xsec-electron-channel_total.csv")
