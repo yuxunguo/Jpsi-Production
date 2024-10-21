@@ -87,15 +87,7 @@ def dsigma(W: float, t: float, A0: float, MA: float, C0: float, MC: float):
 def sigma(W: float, A0: float, MA: float, C0: float, MC: float):
     return quad(lambda u: dsigma(W, u, A0, MA, C0, MC), tmin(W), tmax(W))[0]
 
-Ag0 = 0.501
-MAg = 1.5
-Cg0 = -2.57 /4
-MCg = 1.5
 
-Aq0 = 0.510
-MAq = 1
-Cq0 = -1.30/4
-MCq = 1
 
 minus_t = np.array(np.load('Lattice Data/minus_t.npy'))
 minus_t_D = minus_t[1:]
@@ -117,28 +109,32 @@ AgDg_cov = np.load('Lattice Data/AgDg_cov.npy')
 
 AqDq_cov = np.load('Lattice Data/AqDq_cov.npy')
 
-print(FormFactors(-minus_t, Aq0, MAq)) # = Aq(t0)
+'''
+print(FormFactors(-minus_t, Aq0lat, MAqlat)) # = Aq(t0)
 print(Aq_mean)
 
-print(4*FormFactors(-minus_t_D, Cq0, MCq)) # = Dq(t0)
+print(4*FormFactors(-minus_t_D, Cq0lat, MCqlat)) # = Dq(t0)
 print(Dq_mean)
 
-print(FormFactors(-minus_t, Ag0, MAg)) # = Ag(t0)
+print(FormFactors(-minus_t, Ag0lat, MAglat)) # = Ag(t0)
 print(Ag_mean)
 
-print(4*FormFactors(-minus_t_D, Cg0, MCg)) # = Dg(t0)
+print(4*FormFactors(-minus_t_D, Cg0lat, MCglat)) # = Dg(t0)
 print(Dg_mean)
 '''
-4 * FormFactors(-minus_t_D[0], Cq0, MCq) # = Dq(-t0)
-print(Dq_mean[0])
-FormFactors(-minus_t[0], Ag0, MAg) # = Ag(t0)
-4 * FormFactors(-minus_t_D[0], Cg0, MCg) # = Dg(t0)
-'''
 
-print(dsigma(4.58,-2,Ag0,MAg,Cg0,MCg)/alphaS**2 * AlphaS(2,NF,Mcharm)**2)
+#print(dsigma(WEb(8.78),-3,Ag0lat,MAglat,Cg0lat,MCglat)/alphaS**2 * AlphaS(2,NF,Mcharm)**2)
+Ag0lat = 0.4776
+MAglat = 1.6746
+Cg0lat = -0.1171
+MCglat = 3.0829
 
-print(dsigma_New(4.58,-2,Ag0, MAg ,Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order = 2))
-
+Aq0lat = 0.5
+MAqlat = 2.0179
+Cq0lat = -0.2245
+MCqlat = 1.9515
+print(dsigma_New(WEb(9.85),-3.89,Ag0lat, MAglat,Cg0lat, MCglat, Aq0lat, MAqlat, Cq0lat, MCqlat, P_order = 1))
+print(dsigma_New(WEb(9.85),-3.89,Ag0lat, MAglat,Cg0lat, MCglat, Aq0lat, MAqlat, Cq0lat, MCqlat, P_order = 2))
 '''
 #Read the csv into dataframe using pandas
 dsigmadata = pd.read_csv("2022-final-xsec-electron-channel_total.csv")
