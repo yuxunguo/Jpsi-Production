@@ -188,7 +188,7 @@ def chi2(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float,
 
     # Two variables Wt[0] = W, Wt[1] = |t| = -t
     if(INCLUDE_XSEC):
-        dsigma_pred=list(map(lambda Wt: dsigma_New(Wt[0], -Wt[1], Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq), zip(dsigmadata_select[:,0], dsigmadata_select[:,1])))
+        dsigma_pred=list(map(lambda Wt: dsigma_New(Wt[0], -Wt[1], Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order = 2), zip(dsigmadata_select[:,0], dsigmadata_select[:,1])))
         chi2dsigma = np.sum(((dsigma_pred - dsigmadata_select[:,2]) / dsigmadata_select[:,3]) **2 )
     else:
         chi2dsigma = 0
