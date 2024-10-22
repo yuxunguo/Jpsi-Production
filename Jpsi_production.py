@@ -106,22 +106,14 @@ Dq_mean = AqDq_mean[34:]
 Dq_data = np.column_stack((minus_t_D,Dq_mean))
 
 AgDg_cov = np.load('Lattice Data/AgDg_cov.npy')
+AgDg_diag = np.diagonal(AgDg_cov)
+Ag_err = np.sqrt(AgDg_diag[:34])
+Dg_err = np.sqrt(AgDg_diag[34:])
 
 AqDq_cov = np.load('Lattice Data/AqDq_cov.npy')
-
-'''
-print(FormFactors(-minus_t, Aq0lat, MAqlat)) # = Aq(t0)
-print(Aq_mean)
-
-print(4*FormFactors(-minus_t_D, Cq0lat, MCqlat)) # = Dq(t0)
-print(Dq_mean)
-
-print(FormFactors(-minus_t, Ag0lat, MAglat)) # = Ag(t0)
-print(Ag_mean)
-
-print(4*FormFactors(-minus_t_D, Cg0lat, MCglat)) # = Dg(t0)
-print(Dg_mean)
-'''
+AqDq_diag = np.diagonal(AqDq_cov)
+Aq_err = np.sqrt(AqDq_diag[:34])
+Dq_err = np.sqrt(AqDq_diag[34:])
 
 #print(dsigma(WEb(8.78),-3,Ag0lat,MAglat,Cg0lat,MCglat)/alphaS**2 * AlphaS(2,NF,Mcharm)**2)
 Ag0lat = 0.4776
@@ -133,9 +125,7 @@ Aq0lat = 0.5
 MAqlat = 2.0179
 Cq0lat = -0.2245
 MCqlat = 1.9515
-print(dsigma_New(WEb(9.85),-3.89,Ag0lat, MAglat,Cg0lat, MCglat, Aq0lat, MAqlat, Cq0lat, MCqlat, P_order = 1))
-print(dsigma_New(WEb(9.85),-3.89,Ag0lat, MAglat,Cg0lat, MCglat, Aq0lat, MAqlat, Cq0lat, MCqlat, P_order = 2))
-'''
+
 #Read the csv into dataframe using pandas
 dsigmadata = pd.read_csv("2022-final-xsec-electron-channel_total.csv")
 # Not fitting the total cross-sections but I imported anyway
@@ -165,7 +155,7 @@ dsigmadata_select = dsigmadata_reshape[mask]
 print(dsigmadata_select.shape[0])
 
 #
-# The same thing for the total cross-sections (Not fitted)
+# Total cross-sections (Not fitted)
 #
 # Taking out the column that we needed
 avg_E_col_sigma = totsigmadata['E_avg'].to_numpy()
@@ -178,39 +168,79 @@ avg_W_col_sigma = WEb(avg_E_col_sigma)
 # Creat a 2d array shape (N,3) with each row (W,dsigma,dsigma_err)
 totsigmadata_reshape =  np.column_stack((avg_W_col_sigma,sigma_col_sigma,sigma_err_col_sigma))
 
-def chi2(A0: float, MA: float, C0: float, MC: float):
+INCLUDE_XSEC = False
+
+def chi2(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float):
 
     #sigma_pred = list(map(lambda W: sigma(W, A0, MA, C0, MC), totsigmadata_reshape[:,0]))
     #chi2sigma = np.sum(((sigma_pred - totsigmadata_reshape[:,1]) / totsigmadata_reshape[:,2]) **2 )
 
-    #Two variables Wt[0] = W, Wt[1] = |t| = -t
-    dsigma_pred=list(map(lambda Wt: dsigma(Wt[0], -Wt[1], A0, MA, C0, MC), zip(dsigmadata_select[:,0], dsigmadata_select[:,1])))
-    chi2dsigma = np.sum(((dsigma_pred - dsigmadata_select[:,2]) / dsigmadata_select[:,3]) **2 )
-    return chi2dsigma #+ chi2sigma
-'''
+    Aqlst = FormFactors(-minus_t, Aq0, MAq) # = Aq(t0)
+    Dqlst = 4 * FormFactors(-minus_t_D, Cq0, MCq)
+    
+    Aglst = FormFactors(-minus_t, Ag0, MAg) # = Aq(t0)
+    Dglst = 4 * FormFactors(-minus_t_D, Cg0, MCg)
 
-'''
+    chi2Aq = np.sum( ((Aqlst-Aq_mean)/Aq_err) ** 2 )
+    chi2Dq = np.sum( ((Dqlst-Dq_mean)/Dq_err) ** 2 )
+    chi2Ag = np.sum( ((Aglst-Ag_mean)/Ag_err) ** 2 )
+    chi2Dg = np.sum( ((Dglst-Dg_mean)/Dg_err) ** 2 )
+
+    # Two variables Wt[0] = W, Wt[1] = |t| = -t
+    if(INCLUDE_XSEC):
+        dsigma_pred=list(map(lambda Wt: dsigma_New(Wt[0], -Wt[1], Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq), zip(dsigmadata_select[:,0], dsigmadata_select[:,1])))
+        chi2dsigma = np.sum(((dsigma_pred - dsigmadata_select[:,2]) / dsigmadata_select[:,3]) **2 )
+    else:
+        chi2dsigma = 0
+    #return chi2Aq + chi2Dq + chi2Ag + chi2Dg # Fitting only to lattice 
+    return chi2Aq + chi2Dq + chi2Ag + chi2Dg + chi2dsigma # + chi2sigma
+
 time_start = time.time()
 
-A0pdf = 0.414
-m = Minuit(chi2, A0 = A0pdf, MA = MALat, C0 = C0Lat ,MC = MCLat)
+m = Minuit(chi2, Ag0 = Ag0lat, MAg = MAglat, Cg0 = Cg0lat ,MCg = MCglat, Aq0 = Aq0lat, MAq = MAqlat, Cq0 = Cq0lat ,MCq = MCqlat)
 m.errordef = 1
 #m.fixed["A0"] = True
 #m.fixed["MC"] = True
-m.fixed["A0"] = True
-m.limits["C0"] = (-20,20)
+#m.fixed["A0"] = True
+#m.limits["C0"] = (-20,20)
 m.migrad()
 m.hesse()
 
-ndof = dsigmadata_select.shape[0]  - m.nfit  # + totsigmadata_reshape.shape[0]
+# ndof = Aq_mean.shape[0] + Dq_mean.shape[0] + Ag_mean.shape[0] + Dg_mean.shape[0]  - m.nfit
+ndof = Aq_mean.shape[0] + Dq_mean.shape[0] + Ag_mean.shape[0] + Dg_mean.shape[0] + dsigmadata_select.shape[0] * INCLUDE_XSEC    - m.nfit  #  + totsigmadata_reshape.shape[0]
 
 time_end = time.time() -time_start
 
-with open('FitOutput.txt', 'w', encoding='utf-8', newline='') as f:
+with open('Output/FitOutput.txt', 'w', encoding='utf-8', newline='') as f:
     print('Total running time: %.1f minutes. Total call of cost function: %3d.\n' % ( time_end/60, m.nfcn), file=f)
     print('The chi squared/d.o.f. is: %.2f / %3d ( = %.2f ).\n' % (m.fval, ndof, m.fval/ndof), file = f)
     print('Below are the final output parameters from iMinuit:', file = f)
     print(*m.values, sep=", ", file = f)
     print(*m.errors, sep=", ", file = f)
     print(m.params, file = f)
-'''
+    
+INCLUDE_XSEC = True
+
+time_start = time.time()
+
+m = Minuit(chi2, Ag0 = Ag0lat, MAg = MAglat, Cg0 = Cg0lat ,MCg = MCglat, Aq0 = Aq0lat, MAq = MAqlat, Cq0 = Cq0lat ,MCq = MCqlat)
+m.errordef = 1
+#m.fixed["A0"] = True
+#m.fixed["MC"] = True
+#m.fixed["A0"] = True
+#m.limits["C0"] = (-20,20)
+m.migrad()
+m.hesse()
+
+# ndof = Aq_mean.shape[0] + Dq_mean.shape[0] + Ag_mean.shape[0] + Dg_mean.shape[0]  - m.nfit
+ndof = Aq_mean.shape[0] + Dq_mean.shape[0] + Ag_mean.shape[0] + Dg_mean.shape[0] + dsigmadata_select.shape[0] * INCLUDE_XSEC    - m.nfit  #  + totsigmadata_reshape.shape[0]
+
+time_end = time.time() -time_start
+
+with open('Output/FitOutput_xsec.txt', 'w', encoding='utf-8', newline='') as f:
+    print('Total running time: %.1f minutes. Total call of cost function: %3d.\n' % ( time_end/60, m.nfcn), file=f)
+    print('The chi squared/d.o.f. is: %.2f / %3d ( = %.2f ).\n' % (m.fval, ndof, m.fval/ndof), file = f)
+    print('Below are the final output parameters from iMinuit:', file = f)
+    print(*m.values, sep=", ", file = f)
+    print(*m.errors, sep=", ", file = f)
+    print(m.params, file = f)
