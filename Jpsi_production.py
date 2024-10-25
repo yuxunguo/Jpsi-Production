@@ -167,9 +167,9 @@ avg_W_col_sigma = WEb(avg_E_col_sigma)
 
 # Creat a 2d array shape (N,3) with each row (W,dsigma,dsigma_err)
 totsigmadata_reshape =  np.column_stack((avg_W_col_sigma,sigma_col_sigma,sigma_err_col_sigma))
-
+'''
 INCLUDE_XSEC = False
-
+P_ORDER = 2
 def chi2(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float):
 
     #sigma_pred = list(map(lambda W: sigma(W, A0, MA, C0, MC), totsigmadata_reshape[:,0]))
@@ -188,7 +188,7 @@ def chi2(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float,
 
     # Two variables Wt[0] = W, Wt[1] = |t| = -t
     if(INCLUDE_XSEC):
-        dsigma_pred=list(map(lambda Wt: dsigma_New(Wt[0], -Wt[1], Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order = 2), zip(dsigmadata_select[:,0], dsigmadata_select[:,1])))
+        dsigma_pred=list(map(lambda Wt: dsigma_New(Wt[0], -Wt[1], Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order = P_ORDER), zip(dsigmadata_select[:,0], dsigmadata_select[:,1])))
         chi2dsigma = np.sum(((dsigma_pred - dsigmadata_select[:,2]) / dsigmadata_select[:,3]) **2 )
     else:
         chi2dsigma = 0
@@ -244,3 +244,98 @@ with open('Output/FitOutput_xsec.txt', 'w', encoding='utf-8', newline='') as f:
     print(*m.values, sep=", ", file = f)
     print(*m.errors, sep=", ", file = f)
     print(m.params, file = f)
+    
+P_ORDER = 1    
+
+time_start = time.time()
+
+m = Minuit(chi2, Ag0 = Ag0lat, MAg = MAglat, Cg0 = Cg0lat ,MCg = MCglat, Aq0 = Aq0lat, MAq = MAqlat, Cq0 = Cq0lat ,MCq = MCqlat, )
+m.errordef = 1
+#m.fixed["A0"] = True
+#m.fixed["MC"] = True
+#m.fixed["A0"] = True
+#m.limits["C0"] = (-20,20)
+m.migrad()
+m.hesse()
+
+# ndof = Aq_mean.shape[0] + Dq_mean.shape[0] + Ag_mean.shape[0] + Dg_mean.shape[0]  - m.nfit
+ndof = Aq_mean.shape[0] + Dq_mean.shape[0] + Ag_mean.shape[0] + Dg_mean.shape[0] + dsigmadata_select.shape[0] * INCLUDE_XSEC    - m.nfit  #  + totsigmadata_reshape.shape[0]
+
+time_end = time.time() -time_start
+
+with open('Output/FitOutput_xsec_porder_1.txt', 'w', encoding='utf-8', newline='') as f:
+    print('Total running time: %.1f minutes. Total call of cost function: %3d.\n' % ( time_end/60, m.nfcn), file=f)
+    print('The chi squared/d.o.f. is: %.2f / %3d ( = %.2f ).\n' % (m.fval, ndof, m.fval/ndof), file = f)
+    print('Below are the final output parameters from iMinuit:', file = f)
+    print(*m.values, sep=", ", file = f)
+    print(*m.errors, sep=", ", file = f)
+    print(m.params, file = f)
+'''
+    
+Ag0lat = 0.4828775568674785
+MAglat = 1.6427055429755593
+Cg0lat = -0.46439056070121026
+MCglat = 0.84695582681868
+
+Aq0lat = 0.49392591129324553
+MAqlat = 1.9336471336475611
+Cq0lat = -0.26396541362213805
+MCqlat = 1.1685635047886935
+
+Ag0p1 = 0.48195072463915617
+MAgp1 = 1.639561790773252
+Cg0p1 = -0.42167023316958085
+MCgp1 = 0.8850152916228669
+
+Aq0p1 = 0.4938627712393706
+MAqp1 = 1.9337917769506476
+Cq0p1 = -0.2643097005548671
+MCqp1 = 1.1675689414245247
+
+Ag0p2 = 0.49973940241429887
+MAgp2 = 1.5758960355173612
+Cg0p2 = -0.3241864209521915
+MCgp2 = 0.9911402004620952
+
+Aq0p2 = 0.5013517221248852
+MAqp2 =  1.887711752148423
+Cq0p2 = -0.20118762318524377
+MCqp2 = 1.3737723492513645
+
+dsigma_p1 = np.array(list(map(lambda Wt: dsigma_New(Wt[0], -Wt[1], Ag0p1, MAgp1, Cg0p1, MCgp1, Aq0p1, MAqp1, Cq0p1, MCqp1, P_order = 1), zip(dsigmadata_select[:,0], dsigmadata_select[:,1]))))
+
+dsigma_p2 = np.array(list(map(lambda Wt: dsigma_New(Wt[0], -Wt[1], Ag0p2, MAgp2, Cg0p2, MCgp2, Aq0p2, MAqp2, Cq0p2, MCqp2, P_order = 2), zip(dsigmadata_select[:,0], dsigmadata_select[:,1]))))
+
+Aqlstlat = FormFactors(-minus_t, Aq0lat, MAqlat) # = Aq(t0)
+Dqlstlat = 4 * FormFactors(-minus_t_D, Cq0lat, MCqlat)
+    
+Aglstlat = FormFactors(-minus_t, Ag0lat, MAglat) # = Aq(t0)
+Dglstlat = 4 * FormFactors(-minus_t_D, Cg0lat, MCglat)
+
+Aqlstp1 = FormFactors(-minus_t, Aq0p1, MAqp1) # = Aq(t0)
+Dqlstp1 = 4 * FormFactors(-minus_t_D, Cq0p1, MCqp1)
+    
+Aglstp1 = FormFactors(-minus_t, Ag0p1, MAgp1) # = Aq(t0)
+Dglstp1 = 4 * FormFactors(-minus_t_D, Cg0p1, MCgp1)
+
+Aqlstp2 = FormFactors(-minus_t, Aq0p2, MAqp2) # = Aq(t0)
+Dqlstp2 = 4 * FormFactors(-minus_t_D, Cq0p2, MCqp2)
+    
+Aglstp2 = FormFactors(-minus_t, Ag0p1, MAgp1) # = Aq(t0)
+Dglstp2 = 4 * FormFactors(-minus_t_D, Cg0p2, MCgp2)
+
+np.savetxt("Plot/dsigma_select_measure.csv", dsigmadata_select, delimiter=",", fmt='%e')
+
+np.savetxt("Plot/dsigma_select_fit.csv", np.column_stack((dsigma_p1,dsigma_p2)), delimiter=",", fmt='%e')
+
+np.savetxt("Plot/Aq_measure.csv", np.column_stack((minus_t,Aq_mean,Aq_err)), delimiter=",", fmt='%e')
+np.savetxt("Plot/Aq_fit.csv", np.column_stack((Aqlstlat,Aqlstp1,Aqlstp2)), delimiter=",", fmt='%e')
+
+np.savetxt("Plot/Ag_measure.csv", np.column_stack((minus_t,Ag_mean,Ag_err)), delimiter=",", fmt='%e')
+np.savetxt("Plot/Ag_fit.csv", np.column_stack((Aglstlat,Aglstp1,Aglstp2)), delimiter=",", fmt='%e')
+
+np.savetxt("Plot/Dq_measure.csv", np.column_stack((minus_t_D,Dq_mean,Dq_err)), delimiter=",", fmt='%e')
+np.savetxt("Plot/Dq_fit.csv", np.column_stack((Dqlstlat,Dqlstp1,Dqlstp2)), delimiter=",", fmt='%e')
+
+np.savetxt("Plot/Dg_measure.csv", np.column_stack((minus_t_D,Dg_mean,Dg_err)), delimiter=",", fmt='%e')
+np.savetxt("Plot/Dg_fit.csv", np.column_stack((Dglstlat,Dglstp1,Dglstp2)), delimiter=",", fmt='%e')
