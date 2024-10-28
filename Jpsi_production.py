@@ -46,13 +46,13 @@ def Xi(W: float, t: float):
 def WEb(Eb: float):
     return np.sqrt(Mproton)*np.sqrt(Mproton + 2 * Eb)
 
-def FormFactors(t: float, A0: float, Mpole: float):
-    return A0/(1 - t / (Mpole ** 2)) ** 3
+def FormFactors(t: float, A0: float, Mpole: float, p_pole: int):
+    return A0/(1 - t / (Mpole ** 2)) ** p_pole
 
-def ComptonFormFactors(t: float, A0: float, MA: float, C0: float, MC: float, xi: float):
+def ComptonFormFactors(t: float, A0: float, MA: float, C0: float, MC: float, xi: float, A_pole: int, C_pole: int):
 
-    Aformfact = FormFactors(t,A0,MA)
-    Cformfact = FormFactors(t,C0,MC)
+    Aformfact = FormFactors(t,A0,MA,A_pole)
+    Cformfact = FormFactors(t,C0,MC,C_pole)
     Bformfact = 0
     
     Hformfact = Aformfact + 4 * xi**2 * Cformfact
@@ -60,10 +60,10 @@ def ComptonFormFactors(t: float, A0: float, MA: float, C0: float, MC: float, xi:
     
     return np.array([Hformfact, Eformfact])
 
-def G2_New(W: float, t: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, P_order = 1): 
+def G2_New(W: float, t: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, P_order: int = 1, A_pole: int = 2, C_pole: int = 3): 
     xi = Xi(W ,t)
-    [gHCFF, gECFF] = 2*ComptonFormFactors(t, Ag0, MAg, Cg0, MCg, xi) / xi ** 2
-    [qHCFF, qECFF] = 2*ComptonFormFactors(t, Aq0, MAq, Cq0, MCq, xi) / xi ** 2
+    [gHCFF, gECFF] = 2*ComptonFormFactors(t, Ag0, MAg, Cg0, MCg, xi, A_pole, C_pole) / xi ** 2
+    [qHCFF, qECFF] = 2*ComptonFormFactors(t, Aq0, MAq, Cq0, MCq, xi, A_pole, C_pole) / xi ** 2
     
     CWS, CWG = np.real(Evo_WilsonCoef_SG(Mcharm,NF,p = 1,p_order= P_order))
     
@@ -72,11 +72,11 @@ def G2_New(W: float, t: float, Ag0: float, MAg: float, Cg0: float, MCg: float, A
     
     return (1-xi ** 2) * (HCFF + ECFF) ** 2 - 2 * ECFF * (HCFF+ECFF) + (1- t/ (4 * Mproton ** 2))* ECFF ** 2
 
-def dsigma_New(W: float, t: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, P_order = 1):
-    return 1/conv * alphaEM * (2/3) **2 /(4* (W ** 2 - Mproton ** 2) ** 2) * (16 * np.pi) ** 2/ (3 * MJpsi ** 3) * psi2 * G2_New(W, t, Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order)
+def dsigma_New(W: float, t: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, P_order = 1, A_pole: int = 2, C_pole: int = 3):
+    return 1/conv * alphaEM * (2/3) **2 /(4* (W ** 2 - Mproton ** 2) ** 2) * (16 * np.pi) ** 2/ (3 * MJpsi ** 3) * psi2 * G2_New(W, t, Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order, A_pole, C_pole)
 
-def sigma_New(W: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, P_order = 1):
-    return quad(lambda u: dsigma(W, u, Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order), tmin(W), tmax(W))[0]
+def sigma_New(W: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, P_order = 1, A_pole: int = 2, C_pole: int = 3):
+    return quad(lambda u: dsigma(W, u, Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order, A_pole, C_pole), tmin(W), tmax(W))[0]
 
 def G2(W: float, t: float, A0: float, MA: float, C0: float, MC: float): 
     return (5/4)** 2 * 4* Xi(W ,t) ** (-4) * ((1- t/ (4 * Mproton ** 2))* FormFactors(t, C0, MC) ** 2 * (4 * Xi(W ,t) ** 2) ** 2 + 2* FormFactors(t, A0, MA) * FormFactors(t, C0, MC)*4 * Xi(W ,t) ** 2 + (1- Xi(W ,t) ** 2) * FormFactors(t,A0,MA) **2)
@@ -170,16 +170,16 @@ totsigmadata_reshape =  np.column_stack((avg_W_col_sigma,sigma_col_sigma,sigma_e
 
 INCLUDE_XSEC = False
 
-def chi2(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float):
+def chi2(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, A_pole: int, C_pole: int):
 
     #sigma_pred = list(map(lambda W: sigma(W, A0, MA, C0, MC), totsigmadata_reshape[:,0]))
     #chi2sigma = np.sum(((sigma_pred - totsigmadata_reshape[:,1]) / totsigmadata_reshape[:,2]) **2 )
 
-    Aqlst = FormFactors(-minus_t, Aq0, MAq) # = Aq(t0)
-    Dqlst = 4 * FormFactors(-minus_t_D, Cq0, MCq)
+    Aqlst = FormFactors(-minus_t, Aq0, MAq, A_pole) # = Aq(t0)
+    Dqlst = 4 * FormFactors(-minus_t_D, Cq0, MCq, C_pole)
     
-    Aglst = FormFactors(-minus_t, Ag0, MAg) # = Aq(t0)
-    Dglst = 4 * FormFactors(-minus_t_D, Cg0, MCg)
+    Aglst = FormFactors(-minus_t, Ag0, MAg, A_pole) # = Aq(t0)
+    Dglst = 4 * FormFactors(-minus_t_D, Cg0, MCg, C_pole)
 
     chi2Aq = np.sum( ((Aqlst-Aq_mean)/Aq_err) ** 2 )
     chi2Dq = np.sum( ((Dqlst-Dq_mean)/Dq_err) ** 2 )
@@ -197,12 +197,10 @@ def chi2(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float,
 
 time_start = time.time()
 
-m = Minuit(chi2, Ag0 = Ag0lat, MAg = MAglat, Cg0 = Cg0lat ,MCg = MCglat, Aq0 = Aq0lat, MAq = MAqlat, Cq0 = Cq0lat ,MCq = MCqlat)
+m = Minuit(chi2, Ag0 = Ag0lat, MAg = MAglat, Cg0 = Cg0lat ,MCg = MCglat, Aq0 = Aq0lat, MAq = MAqlat, Cq0 = Cq0lat ,MCq = MCqlat, A_pole = 2, C_pole = 3)
 m.errordef = 1
-#m.fixed["A0"] = True
-#m.fixed["MC"] = True
-#m.fixed["A0"] = True
-#m.limits["C0"] = (-20,20)
+m.fixed["A_pole"] = True
+m.fixed["C_pole"] = True
 m.migrad()
 m.hesse()
 
@@ -223,12 +221,10 @@ INCLUDE_XSEC = True
 
 time_start = time.time()
 
-m = Minuit(chi2, Ag0 = Ag0lat, MAg = MAglat, Cg0 = Cg0lat ,MCg = MCglat, Aq0 = Aq0lat, MAq = MAqlat, Cq0 = Cq0lat ,MCq = MCqlat)
+m = Minuit(chi2, Ag0 = Ag0lat, MAg = MAglat, Cg0 = Cg0lat ,MCg = MCglat, Aq0 = Aq0lat, MAq = MAqlat, Cq0 = Cq0lat ,MCq = MCqlat, A_pole = 2, C_pole = 3)
 m.errordef = 1
-#m.fixed["A0"] = True
-#m.fixed["MC"] = True
-#m.fixed["A0"] = True
-#m.limits["C0"] = (-20,20)
+m.fixed["A_pole"] = True
+m.fixed["C_pole"] = True
 m.migrad()
 m.hesse()
 
