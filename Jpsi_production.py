@@ -5,6 +5,9 @@ from Evolution import Evo_WilsonCoef_SG,AlphaS
 import pandas as pd
 import time
 
+import matplotlib.pyplot as plt
+from itertools import combinations
+
 NF=4
 
 Mproton = 0.938
@@ -169,6 +172,7 @@ avg_W_col_sigma = WEb(avg_E_col_sigma)
 totsigmadata_reshape =  np.column_stack((avg_W_col_sigma,sigma_col_sigma,sigma_err_col_sigma))
 
 INCLUDE_XSEC = False
+P_ORDER = 1
 
 def chi2(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, A_pole: int, C_pole: int):
 
@@ -188,55 +192,87 @@ def chi2(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float,
 
     # Two variables Wt[0] = W, Wt[1] = |t| = -t
     if(INCLUDE_XSEC):
-        dsigma_pred=list(map(lambda Wt: dsigma_New(Wt[0], -Wt[1], Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order = 2), zip(dsigmadata_select[:,0], dsigmadata_select[:,1])))
+        dsigma_pred=list(map(lambda Wt: dsigma_New(Wt[0], -Wt[1], Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order = P_ORDER), zip(dsigmadata_select[:,0], dsigmadata_select[:,1])))
         chi2dsigma = np.sum(((dsigma_pred - dsigmadata_select[:,2]) / dsigmadata_select[:,3]) **2 )
     else:
         chi2dsigma = 0
     #return chi2Aq + chi2Dq + chi2Ag + chi2Dg # Fitting only to lattice 
     return chi2Aq + chi2Dq + chi2Ag + chi2Dg + chi2dsigma # + chi2sigma
 
-time_start = time.time()
+def fit(str):
+    time_start = time.time()
 
-m = Minuit(chi2, Ag0 = Ag0lat, MAg = MAglat, Cg0 = Cg0lat ,MCg = MCglat, Aq0 = Aq0lat, MAq = MAqlat, Cq0 = Cq0lat ,MCq = MCqlat, A_pole = 2, C_pole = 3)
-m.errordef = 1
-m.fixed["A_pole"] = True
-m.fixed["C_pole"] = True
-m.migrad()
-m.hesse()
+    m = Minuit(chi2, Ag0 = Ag0lat, MAg = MAglat, Cg0 = Cg0lat ,MCg = MCglat, Aq0 = Aq0lat, MAq = MAqlat, Cq0 = Cq0lat ,MCq = MCqlat, A_pole = 2, C_pole = 3)
+    m.errordef = 1
+    m.fixed["A_pole"] = True
+    m.fixed["C_pole"] = True
 
-# ndof = Aq_mean.shape[0] + Dq_mean.shape[0] + Ag_mean.shape[0] + Dg_mean.shape[0]  - m.nfit
-ndof = Aq_mean.shape[0] + Dq_mean.shape[0] + Ag_mean.shape[0] + Dg_mean.shape[0] + dsigmadata_select.shape[0] * INCLUDE_XSEC    - m.nfit  #  + totsigmadata_reshape.shape[0]
+    m.limits["Ag0"] = (0,1)
+    m.limits["MAg"] = (0,5)
+    m.limits["Cg0"] = (-5,5)
+    m.limits["MCg"] = (0,5)
+    m.limits["Aq0"] = (0,1)
+    m.limits["MAq"] = (0,5)
+    m.limits["Cq0"] = (-5,5)
+    m.limits["MCq"] = (0,5)
 
-time_end = time.time() -time_start
+    m.migrad()
+    m.hesse()
 
-with open('Output/FitOutput.txt', 'w', encoding='utf-8', newline='') as f:
-    print('Total running time: %.1f minutes. Total call of cost function: %3d.\n' % ( time_end/60, m.nfcn), file=f)
-    print('The chi squared/d.o.f. is: %.2f / %3d ( = %.2f ).\n' % (m.fval, ndof, m.fval/ndof), file = f)
-    print('Below are the final output parameters from iMinuit:', file = f)
-    print(*m.values, sep=", ", file = f)
-    print(*m.errors, sep=", ", file = f)
-    print(m.params, file = f)
-    
+    # ndof = Aq_mean.shape[0] + Dq_mean.shape[0] + Ag_mean.shape[0] + Dg_mean.shape[0]  - m.nfit
+    ndof = Aq_mean.shape[0] + Dq_mean.shape[0] + Ag_mean.shape[0] + Dg_mean.shape[0] + dsigmadata_select.shape[0] * INCLUDE_XSEC - m.nfit  #  + totsigmadata_reshape.shape[0]
+
+    time_end = time.time() -time_start
+
+    with open(f'Output/{str}.txt', 'w', encoding='utf-8', newline='') as f:
+        print('Total running time: %.1f minutes. Total call of cost function: %3d.\n' % ( time_end/60, m.nfcn), file=f)
+        print('The chi squared/d.o.f. is: %.2f / %3d ( = %.2f ).\n' % (m.fval, ndof, m.fval/ndof), file = f)
+        print('Below are the final output parameters from iMinuit:', file = f)
+        print(*m.values, sep=", ", file = f)
+        print(*m.errors, sep=", ", file = f)
+        print(m.params, file = f)
+        
+    param_names = m.parameters[:-2]
+    param_len = len(param_names)
+
+    fig = plt.figure(figsize=(24,20))
+    gs = fig.add_gridspec(param_len, param_len)
+
+    for idx in range(param_len):
+        for idy in range(idx+1,param_len):
+            ax = fig.add_subplot(gs[idy, idx]) 
+            #x, y, Z = m.contour(param_names[idx], param_names[idy], size=100, bound = (m.limits[param_names[idx]],m.limits[param_names[idy]]))
+            x, y, Z = m.contour(param_names[idx], param_names[idy], size=50)
+            ax.contour(x, y, Z,levels = 25, cmap='viridis')
+            if(idy==param_len-1):
+                ax.set_xlabel(param_names[idx])
+            if(idx==0):
+                ax.set_ylabel(param_names[idy])
+
+    for idxx in range(param_len):
+        ax = fig.add_subplot(gs[idxx, idxx]) 
+        x, y = m.profile(param_names[idxx], size = 50, bound = m.limits[param_names[idxx]])
+        ax.plot(x,y)
+        if(idxx==param_len-1):
+            ax.set_xlabel(param_names[idxx])
+        if(idxx==0):
+            ax.set_ylabel(param_names[idxx])
+        
+    plt.tight_layout()
+    plt.savefig(f'Output/{str}.png') 
+    plt.close('all')
+
+INCLUDE_XSEC = False
+P_ORDER = 1
+fit("lattice_only")
+print("Lattice only fit and plot finished...")
+
 INCLUDE_XSEC = True
+P_ORDER = 1
+fit("lattice_LOexp")
+print("Lattice + LO experimental data fit and plot finished...")
 
-time_start = time.time()
-
-m = Minuit(chi2, Ag0 = Ag0lat, MAg = MAglat, Cg0 = Cg0lat ,MCg = MCglat, Aq0 = Aq0lat, MAq = MAqlat, Cq0 = Cq0lat ,MCq = MCqlat, A_pole = 2, C_pole = 3)
-m.errordef = 1
-m.fixed["A_pole"] = True
-m.fixed["C_pole"] = True
-m.migrad()
-m.hesse()
-
-# ndof = Aq_mean.shape[0] + Dq_mean.shape[0] + Ag_mean.shape[0] + Dg_mean.shape[0]  - m.nfit
-ndof = Aq_mean.shape[0] + Dq_mean.shape[0] + Ag_mean.shape[0] + Dg_mean.shape[0] + dsigmadata_select.shape[0] * INCLUDE_XSEC    - m.nfit  #  + totsigmadata_reshape.shape[0]
-
-time_end = time.time() -time_start
-
-with open('Output/FitOutput_xsec.txt', 'w', encoding='utf-8', newline='') as f:
-    print('Total running time: %.1f minutes. Total call of cost function: %3d.\n' % ( time_end/60, m.nfcn), file=f)
-    print('The chi squared/d.o.f. is: %.2f / %3d ( = %.2f ).\n' % (m.fval, ndof, m.fval/ndof), file = f)
-    print('Below are the final output parameters from iMinuit:', file = f)
-    print(*m.values, sep=", ", file = f)
-    print(*m.errors, sep=", ", file = f)
-    print(m.params, file = f)
+INCLUDE_XSEC = True
+P_ORDER = 2
+fit("lattice_NLOexp")
+print("Lattice + NLO experimental data fit and plot finished...")

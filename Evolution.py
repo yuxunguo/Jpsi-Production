@@ -16,7 +16,7 @@ from scipy.special import psi, zeta, gamma, orthogonal, loggamma
 from math import factorial, log
 from typing import Tuple, Union
 from numba import vectorize, njit
-
+from functools import lru_cache
 """
 ***********************QCD constants***************************************
 Refer to the constants.py at https://github.com/kkumer/gepard.
@@ -754,6 +754,7 @@ def Evo_SG_NLO(j: np.array, nf: int, p: int, mu: float) -> np.array:
     
     return evola0, evola1_diag
 
+@lru_cache(maxsize=None) 
 def Evo_WilsonCoef_SG(mu: float,nf: int, p:int = 1, p_order: int =1):
     """Return evolved Wilson Coefficient at j=1
 
