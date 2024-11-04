@@ -4,9 +4,9 @@ from scipy.integrate import quad
 from Evolution import Evo_WilsonCoef_SG,AlphaS
 import pandas as pd
 import time
+import os
 
 import matplotlib.pyplot as plt
-from itertools import combinations
 
 NF=4
 
@@ -223,8 +223,10 @@ def fit(str):
     ndof = Aq_mean.shape[0] + Dq_mean.shape[0] + Ag_mean.shape[0] + Dg_mean.shape[0] + dsigmadata_select.shape[0] * INCLUDE_XSEC - m.nfit  #  + totsigmadata_reshape.shape[0]
 
     time_end = time.time() -time_start
-
-    with open(f'Output/{str}.txt', 'w', encoding='utf-8', newline='') as f:
+    
+    os.makedirs(f'Output/{str}', exist_ok=True)
+    
+    with open(f'Output/{str}/Summary.txt', 'w', encoding='utf-8', newline='') as f:
         print('Total running time: %.1f minutes. Total call of cost function: %3d.\n' % ( time_end/60, m.nfcn), file=f)
         print('The chi squared/d.o.f. is: %.2f / %3d ( = %.2f ).\n' % (m.fval, ndof, m.fval/ndof), file = f)
         print('Below are the final output parameters from iMinuit:', file = f)
@@ -259,7 +261,88 @@ def fit(str):
             ax.set_ylabel(param_names[idxx])
         
     plt.tight_layout()
-    plt.savefig(f'Output/{str}.png') 
+    plt.savefig(f'Output/{str}/Correlation.png') 
+    plt.close('all')
+    
+    Ag0_bf = m.values["Ag0"]
+    MAg_bf = m.values["MAg"]
+    Cg0_bf = m.values["Cg0"]
+    MCg_bf = m.values["MCg"]
+    
+    Aq0_bf = m.values["Aq0"]
+    MAq_bf = m.values["MAq"]
+    Cq0_bf = m.values["Cq0"]
+    MCq_bf = m.values["MCq"]
+    
+    A_pole_bf = m.values["A_pole"]
+    C_pole_bf = m.values["C_pole"]
+    
+    fit_minus_t = np.linspace(0, 2, 100)
+    
+    Aq_bf = FormFactors(-fit_minus_t, Aq0_bf, MAq_bf, A_pole_bf)
+    Ag_bf = FormFactors(-fit_minus_t, Ag0_bf, MAg_bf, A_pole_bf)
+    Cq_bf = 4*FormFactors(-fit_minus_t, Cq0_bf, MCq_bf, C_pole_bf)
+    Cg_bf = 4*FormFactors(-fit_minus_t, Cg0_bf, MCg_bf, C_pole_bf)
+    
+    fig_2 = plt.figure(figsize=(24,20))
+    gs_2 = fig_2.add_gridspec(2, 2)
+    
+    ax11 = fig_2.add_subplot(gs_2[0, 0])
+    ax11.errorbar(minus_t, Aq_mean, yerr = Aq_err, fmt='o', capsize=5, capthick=1, ecolor='red', label="Lattice $A_q$")
+    ax11.plot(fit_minus_t, Aq_bf, color = 'blue', label= f'Best-fit $A_q$')
+    ax11.set_xlabel('-t (GeV$^2$)')
+    ax11.legend(fontsize=30)
+    
+    ax12 = fig_2.add_subplot(gs_2[0, 1])
+    ax12.errorbar(minus_t_D, Dq_mean, yerr = Dq_err, fmt='o', capsize=5, capthick=1, ecolor='red', label="Lattice $D_q$")
+    ax12.plot(fit_minus_t, Cq_bf, color = 'blue', label= f'Best-fit $D_q$')
+    ax12.set_xlabel('-t (GeV$^2$)')
+    ax12.legend(fontsize=30)
+    
+    ax21 = fig_2.add_subplot(gs_2[1, 0])
+    ax21.errorbar(minus_t, Ag_mean, yerr = Ag_err, fmt='o', capsize=5, capthick=1, ecolor='red', label="Lattice $A_g$")
+    ax21.plot(fit_minus_t, Ag_bf, color = 'blue', label= f'Best-fit $A_g$')
+    ax21.set_xlabel('-t (GeV$^2$)')
+    ax21.legend(fontsize=30)
+    
+    ax22 = fig_2.add_subplot(gs_2[1, 1])
+    ax22.errorbar(minus_t_D, Dg_mean, yerr = Dg_err, fmt='o', capsize=5, capthick=1, ecolor='red', label="Lattice $D_g$")
+    ax22.plot(fit_minus_t, Cg_bf, color = 'blue', label= f'Best-fit $D_g$')
+    ax22.set_xlabel('-t (GeV$^2$)')
+    ax22.legend(fontsize=30)
+    
+    plt.savefig(f'Output/{str}/Lat_Compare.png') 
+    plt.close('all')
+    
+    fig_3 = plt.figure(figsize=(24,20))
+    gs_3 = fig_3.add_gridspec(2, 2)
+    
+    dsigma_pred_select = list(map(lambda Wt: dsigma_New(Wt[0], -Wt[1], Ag0_bf, MAg_bf, Cg0_bf, MCg_bf, Aq0_bf, MAq_bf, Cq0_bf, MCq_bf, P_order = P_ORDER), zip(dsigmadata_select[:,0], dsigmadata_select[:,1])))
+    dsigma_pred_all = list(map(lambda Wt: dsigma_New(Wt[0], -Wt[1], Ag0_bf, MAg_bf, Cg0_bf, MCg_bf, Aq0_bf, MAq_bf, Cq0_bf, MCq_bf, P_order = P_ORDER), zip(dsigmadata_reshape[:,0], dsigmadata_reshape[:,1])))
+    
+    ax11 = fig_3.add_subplot(gs_3[0, 0])
+    ax11.errorbar(dsigmadata_select[:,1], dsigmadata_select[:,2], yerr = dsigmadata_select[:,3], fmt='o', capsize=5, capthick=1, ecolor='red', label="Xsec Data")
+    ax11.scatter(dsigmadata_select[:,1], dsigma_pred_select, color='blue', marker='D', label='XSec Fit')
+    ax11.legend(fontsize=30)
+
+    ax12 = fig_3.add_subplot(gs_3[0, 1])
+    ax12.errorbar(dsigmadata_select[:,1], dsigmadata_select[:,2], yerr = dsigmadata_select[:,3], fmt='o', capsize=5, capthick=1, ecolor='red', label="Xsec Data")
+    ax12.scatter(dsigmadata_select[:,1], dsigma_pred_select, color='blue', marker='D', label='XSec Fit')
+    ax12.legend(fontsize=30)
+    ax12.set_yscale("log")
+    
+    ax21 = fig_3.add_subplot(gs_3[1, 0])
+    ax21.errorbar(dsigmadata_reshape[:,1], dsigmadata_reshape[:,2], yerr = dsigmadata_reshape[:,3], fmt='o', capsize=5, capthick=1, ecolor='red', label="Xsec Data")
+    ax21.scatter(dsigmadata_reshape[:,1], dsigma_pred_all, color='blue', marker='D', label='XSec Fit')
+    ax21.legend(fontsize=30)
+    
+    ax22 = fig_3.add_subplot(gs_3[1, 1])
+    ax22.errorbar(dsigmadata_reshape[:,1], dsigmadata_reshape[:,2], yerr = dsigmadata_reshape[:,3], fmt='o', capsize=5, capthick=1, ecolor='red', label="Xsec Data")
+    ax22.scatter(dsigmadata_reshape[:,1], dsigma_pred_all, color='blue', marker='D', label='XSec Fit')
+    ax22.legend(fontsize=30)
+    ax22.set_yscale("log")
+    
+    plt.savefig(f'Output/{str}/Exp_Compare.png')
     plt.close('all')
 
 INCLUDE_XSEC = False
