@@ -172,6 +172,7 @@ avg_W_col_sigma = WEb(avg_E_col_sigma)
 totsigmadata_reshape =  np.column_stack((avg_W_col_sigma,sigma_col_sigma,sigma_err_col_sigma))
 
 INCLUDE_XSEC = False
+
 P_ORDER = 1
 
 def chi2(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, A_pole: int, C_pole: int):
@@ -344,7 +345,7 @@ def fit(str):
     
     plt.savefig(f'Output/{str}/Exp_Compare.png')
     plt.close('all')
-
+'''
 INCLUDE_XSEC = False
 P_ORDER = 1
 fit("lattice_only")
@@ -359,3 +360,131 @@ INCLUDE_XSEC = True
 P_ORDER = 2
 fit("lattice_NLOexp")
 print("Lattice + NLO experimental data fit and plot finished...")
+'''
+
+def chi2_exp(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, A_pole: int, C_pole: int):
+
+    #sigma_pred = list(map(lambda W: sigma(W, A0, MA, C0, MC), totsigmadata_reshape[:,0]))
+    #chi2sigma = np.sum(((sigma_pred - totsigmadata_reshape[:,1]) / totsigmadata_reshape[:,2]) **2 )
+    Aq0= 1-Ag0
+    dsigma_pred=list(map(lambda Wt: dsigma_New(Wt[0], -Wt[1], Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order = P_ORDER), zip(dsigmadata_select[:,0], dsigmadata_select[:,1])))
+    chi2dsigma = np.sum(((dsigma_pred - dsigmadata_select[:,2]) / dsigmadata_select[:,3]) **2 )
+
+    return chi2dsigma
+
+def fit_exponly(str):
+    time_start=time.time()
+    m = Minuit(chi2_exp, Ag0 = 0.40, MAg = MAglat, Cg0 = Cg0lat ,MCg = MCglat, Aq0 = Aq0lat, MAq = MAqlat, Cq0 = Cq0lat ,MCq = MCqlat, A_pole = 2, C_pole = 3)
+    m.errordef = 1
+    m.fixed["A_pole"] = True
+    m.fixed["C_pole"] = True
+    m.fixed["Aq0"] = True
+    m.fixed["Ag0"] = True
+    if(str=='Exp_only_LO'):
+        m.fixed["Cq0"] = True
+        m.fixed["MAq"] = True
+        m.fixed["MCq"] = True
+        
+    m.limits["Ag0"] = (0,1)
+    m.limits["MAg"] = (0,5)
+    m.limits["Cg0"] = (-5,5)
+    m.limits["MCg"] = (0,5)
+    m.limits["Aq0"] = (0,1)
+    m.limits["MAq"] = (0,5)
+    m.limits["Cq0"] = (-5,5)
+    m.limits["MCq"] = (0,5)
+
+    m.migrad()
+    m.hesse()
+    time_end = time.time() -time_start
+    ndof = dsigmadata_select.shape[0] - m.nfit  #  + totsigmadata_reshape.shape[0]
+
+    os.makedirs(f'Output/{str}', exist_ok=True)
+
+    with open(f'Output/{str}/Summary.txt', 'w', encoding='utf-8', newline='') as f:
+        print('Total running time: %.1f minutes. Total call of cost function: %3d.\n' % ( time_end/60, m.nfcn), file=f)
+        print('The chi squared/d.o.f. is: %.2f / %3d ( = %.2f ).\n' % (m.fval, ndof, m.fval/ndof), file = f)
+        print('Below are the final output parameters from iMinuit:', file = f)
+        print(*m.values, sep=", ", file = f)
+        print(*m.errors, sep=", ", file = f)
+        print(m.params, file = f)
+        
+    param_names = m.parameters[:-2]
+    param_len = len(param_names)
+
+    fig = plt.figure(figsize=(24,20))
+    gs = fig.add_gridspec(param_len, param_len)
+
+    for idx in range(param_len):
+        for idy in range(idx+1,param_len):
+            ax = fig.add_subplot(gs[idy, idx]) 
+            #x, y, Z = m.contour(param_names[idx], param_names[idy], size=100, bound = (m.limits[param_names[idx]],m.limits[param_names[idy]]))
+            x, y, Z = m.contour(param_names[idx], param_names[idy], size=50)
+            ax.contour(x, y, Z,levels = 25, cmap='viridis')
+            if(idy==param_len-1):
+                ax.set_xlabel(param_names[idx])
+            if(idx==0):
+                ax.set_ylabel(param_names[idy])
+
+    for idxx in range(param_len):
+        ax = fig.add_subplot(gs[idxx, idxx]) 
+        x, y = m.profile(param_names[idxx], size = 50, bound = m.limits[param_names[idxx]])
+        ax.plot(x,y)
+        if(idxx==param_len-1):
+            ax.set_xlabel(param_names[idxx])
+        if(idxx==0):
+            ax.set_ylabel(param_names[idxx])
+        
+    plt.tight_layout()
+    plt.savefig(f'Output/{str}/Correlation.png') 
+    plt.close('all')
+
+    Ag0_bf = m.values["Ag0"]
+    MAg_bf = m.values["MAg"]
+    Cg0_bf = m.values["Cg0"]
+    MCg_bf = m.values["MCg"]
+
+    Aq0_bf = 1 - Ag0_bf
+    MAq_bf = m.values["MAq"]
+    Cq0_bf = m.values["Cq0"]
+    MCq_bf = m.values["MCq"]
+
+    A_pole_bf = m.values["A_pole"]
+    C_pole_bf = m.values["C_pole"]
+
+    fig_3 = plt.figure(figsize=(24,20))
+    gs_3 = fig_3.add_gridspec(2, 2)
+
+    dsigma_pred_select = list(map(lambda Wt: dsigma_New(Wt[0], -Wt[1], Ag0_bf, MAg_bf, Cg0_bf, MCg_bf, Aq0_bf, MAq_bf, Cq0_bf, MCq_bf, P_order = P_ORDER), zip(dsigmadata_select[:,0], dsigmadata_select[:,1])))
+    dsigma_pred_all = list(map(lambda Wt: dsigma_New(Wt[0], -Wt[1], Ag0_bf, MAg_bf, Cg0_bf, MCg_bf, Aq0_bf, MAq_bf, Cq0_bf, MCq_bf, P_order = P_ORDER), zip(dsigmadata_reshape[:,0], dsigmadata_reshape[:,1])))
+
+    ax11 = fig_3.add_subplot(gs_3[0, 0])
+    ax11.errorbar(dsigmadata_select[:,1], dsigmadata_select[:,2], yerr = dsigmadata_select[:,3], fmt='o', capsize=5, capthick=1, ecolor='red', label="Xsec Data")
+    ax11.scatter(dsigmadata_select[:,1], dsigma_pred_select, color='blue', marker='D', label='XSec Fit')
+    ax11.legend(fontsize=30)
+
+    ax12 = fig_3.add_subplot(gs_3[0, 1])
+    ax12.errorbar(dsigmadata_select[:,1], dsigmadata_select[:,2], yerr = dsigmadata_select[:,3], fmt='o', capsize=5, capthick=1, ecolor='red', label="Xsec Data")
+    ax12.scatter(dsigmadata_select[:,1], dsigma_pred_select, color='blue', marker='D', label='XSec Fit')
+    ax12.legend(fontsize=30)
+    ax12.set_yscale("log")
+
+    ax21 = fig_3.add_subplot(gs_3[1, 0])
+    ax21.errorbar(dsigmadata_reshape[:,1], dsigmadata_reshape[:,2], yerr = dsigmadata_reshape[:,3], fmt='o', capsize=5, capthick=1, ecolor='red', label="Xsec Data")
+    ax21.scatter(dsigmadata_reshape[:,1], dsigma_pred_all, color='blue', marker='D', label='XSec Fit')
+    ax21.legend(fontsize=30)
+
+    ax22 = fig_3.add_subplot(gs_3[1, 1])
+    ax22.errorbar(dsigmadata_reshape[:,1], dsigmadata_reshape[:,2], yerr = dsigmadata_reshape[:,3], fmt='o', capsize=5, capthick=1, ecolor='red', label="Xsec Data")
+    ax22.scatter(dsigmadata_reshape[:,1], dsigma_pred_all, color='blue', marker='D', label='XSec Fit')
+    ax22.legend(fontsize=30)
+    ax22.set_yscale("log")
+
+    plt.savefig(f'Output/{str}/Exp_Compare.png')
+    plt.close('all')
+    
+P_ORDER = 1
+fit_exponly("Exp_only_LO")
+
+P_ORDER = 2
+fit_exponly("Exp_only_NLO")

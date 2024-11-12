@@ -800,4 +800,3 @@ def Evo_WilsonCoef_SG(mu: float,nf: int, p:int = 1, p_order: int =1):
         return CWevo0 + CWevo1
     if(p_order == 3):
         return CWevo0 + CWevo1 + CWevo2
-
