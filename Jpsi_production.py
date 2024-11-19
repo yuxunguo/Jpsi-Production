@@ -380,7 +380,7 @@ def fit_exponly(str):
     m.fixed["C_pole"] = True
     m.fixed["Aq0"] = True
     m.fixed["Ag0"] = True
-    if(str=='Exp_only_LO'):
+    if(P_ORDER == 1):
         m.fixed["Cq0"] = True
         m.fixed["MAq"] = True
         m.fixed["MCq"] = True
@@ -408,10 +408,10 @@ def fit_exponly(str):
         print(*m.values, sep=", ", file = f)
         print(*m.errors, sep=", ", file = f)
         print(m.params, file = f)
-        
+
     param_names = m.parameters[:-2]
     param_len = len(param_names)
-
+    '''
     fig = plt.figure(figsize=(24,20))
     gs = fig.add_gridspec(param_len, param_len)
 
@@ -434,8 +434,10 @@ def fit_exponly(str):
             ax.set_xlabel(param_names[idxx])
         if(idxx==0):
             ax.set_ylabel(param_names[idxx])
-        
+    '''
+    m.draw_mnmatrix(cl=[1],figsize=(12,12),size=150)
     plt.tight_layout()
+    #plt.show()
     plt.savefig(f'Output/{str}/Correlation.png') 
     plt.close('all')
 
