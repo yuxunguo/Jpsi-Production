@@ -411,7 +411,7 @@ def fit_exponly(str):
 
     param_names = m.parameters[:-2]
     param_len = len(param_names)
-    '''
+
     fig = plt.figure(figsize=(24,20))
     gs = fig.add_gridspec(param_len, param_len)
 
@@ -434,8 +434,8 @@ def fit_exponly(str):
             ax.set_xlabel(param_names[idxx])
         if(idxx==0):
             ax.set_ylabel(param_names[idxx])
-    '''
-    m.draw_mnmatrix(cl=[1],figsize=(12,12),size=150)
+
+    #m.draw_mnmatrix(cl=[1],figsize=(12,12),size=150)
     plt.tight_layout()
     #plt.show()
     plt.savefig(f'Output/{str}/Correlation.png') 
