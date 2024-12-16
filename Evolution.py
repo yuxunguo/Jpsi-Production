@@ -800,3 +800,28 @@ def Evo_WilsonCoef_SG(mu: float,nf: int, p:int = 1, p_order: int =1):
         return CWevo0 + CWevo1
     if(p_order == 3):
         return CWevo0 + CWevo1 + CWevo2
+    
+@lru_cache(maxsize=None) 
+def evGFF(mu: float,nf: int, p:int = 1, p_order: int = 1):
+    
+    j0 = np.array([1.])
+    
+    evola0, evola1_diag = Evo_SG_NLO(j0,nf,p,mu)
+
+    if(p_order == 1):
+        evGFF = np.real(evola0[0])
+    if(p_order == 2):
+        evGFF = np.real(evola0[0]+evola1_diag[0])
+        
+    return evGFF
+
+def Mom_Evo(Fq, Fg, mu: float,nf: int, p:int = 1, p_order: int = 1):
+    
+    evGFFMat = evGFF(mu, nf, p, p_order)
+
+    unevolved_Moments = np.vstack((Fq, Fg))  # Shape: (2, N)
+
+    # Perform matrix multiplication
+    Fq_ev, Fg_ev = evGFFMat @ unevolved_Moments  # Shape: (2, N)
+
+    return Fq_ev, Fg_ev

@@ -1,11 +1,10 @@
 import numpy as np
 from iminuit import Minuit
 from scipy.integrate import quad
-from Evolution import Evo_WilsonCoef_SG,AlphaS
+from Evolution import Evo_WilsonCoef_SG,AlphaS, Mom_Evo
 import pandas as pd
 import time
 import os
-
 import matplotlib.pyplot as plt
 
 NF=4
@@ -186,6 +185,9 @@ def chi2(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float,
     Aglst = FormFactors(-minus_t, Ag0, MAg, A_pole) # = Aq(t0)
     Dglst = 4 * FormFactors(-minus_t_D, Cg0, MCg, C_pole)
 
+    Aqlst, Aglst = Mom_Evo(Aqlst, Aglst, 2.0, 1, NF, P_ORDER)
+    Dqlst, Dglst = Mom_Evo(Dqlst, Dglst, 2.0, 1, NF, P_ORDER)
+    
     chi2Aq = np.sum( ((Aqlst-Aq_mean)/Aq_err) ** 2 )
     chi2Dq = np.sum( ((Dqlst-Dq_mean)/Dq_err) ** 2 )
     chi2Ag = np.sum( ((Aglst-Ag_mean)/Ag_err) ** 2 )
@@ -402,7 +404,7 @@ def fit_exponly(str):
     os.makedirs(f'Output/{str}', exist_ok=True)
 
     with open(f'Output/{str}/Summary.txt', 'w', encoding='utf-8', newline='') as f:
-        print('Total running time: %.1f minutes. Total call of cost function: %3d.\n' % ( time_end/60, m.nfcn), file=f)
+        print('Total running time: %.3f minutes. Total call of cost function: %3d.\n' % ( time_end/60, m.nfcn), file=f)
         print('The chi squared/d.o.f. is: %.2f / %3d ( = %.2f ).\n' % (m.fval, ndof, m.fval/ndof), file = f)
         print('Below are the final output parameters from iMinuit:', file = f)
         print(*m.values, sep=", ", file = f)
@@ -484,9 +486,11 @@ def fit_exponly(str):
 
     plt.savefig(f'Output/{str}/Exp_Compare.png')
     plt.close('all')
-    
+
+'''
 P_ORDER = 1
 fit_exponly("Exp_only_LO")
 
 P_ORDER = 2
 fit_exponly("Exp_only_NLO")
+'''
