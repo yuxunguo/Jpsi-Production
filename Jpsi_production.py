@@ -156,7 +156,7 @@ mask = xi_col_dsigma>=xi_thres
 # Select the data with the mas
 dsigmadata_select = dsigmadata_reshape[mask]
 # only 33 data left with xi>0.5
-print(dsigmadata_select)
+#print(dsigmadata_select)
 
 with open("dsigmadata_select.csv", "w", newline="") as file:
     writer = csv.writer(file)
