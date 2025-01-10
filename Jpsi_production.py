@@ -6,6 +6,7 @@ import pandas as pd
 import time
 import os
 import matplotlib.pyplot as plt
+import csv
 
 NF=4
 
@@ -138,12 +139,13 @@ avg_E_col_dsigma=dsigmadata['avg_E'].to_numpy()
 avg_abs_t_col_dsigma = dsigmadata['avg_abs_t'].to_numpy()
 dsdt_nb_col_dsigma = dsigmadata['dsdt_nb'].to_numpy()
 tot_error_col_dsigma = dsigmadata['tot_error'].to_numpy()
+E_id_col_dsigma = dsigmadata['E_idx'].to_numpy()
 
 # Calculate the W in terms of the beam energy for the whole array
 avg_W_col_dsigma = WEb(avg_E_col_dsigma)
 
 # Creat a 2d array shape (N,4) with each row (W,|t|,dsigma,dsigma_err)
-dsigmadata_reshape = np.column_stack((avg_W_col_dsigma, avg_abs_t_col_dsigma, dsdt_nb_col_dsigma, tot_error_col_dsigma))
+dsigmadata_reshape = np.column_stack((avg_W_col_dsigma, avg_abs_t_col_dsigma, dsdt_nb_col_dsigma, tot_error_col_dsigma,E_id_col_dsigma))
 
 # We want to select all the data with xi > xi_thres, here I put xi_thres = 0.5 to be consist with the paper
 xi_thres = 0.5
@@ -154,7 +156,12 @@ mask = xi_col_dsigma>=xi_thres
 # Select the data with the mas
 dsigmadata_select = dsigmadata_reshape[mask]
 # only 33 data left with xi>0.5
-print(dsigmadata_select.shape[0])
+print(dsigmadata_select)
+
+with open("dsigmadata_select.csv", "w", newline="") as file:
+    writer = csv.writer(file)
+    writer.writerows(dsigmadata_select)
+
 
 #
 # Total cross-sections (Not fitted)
