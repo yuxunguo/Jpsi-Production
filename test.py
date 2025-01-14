@@ -8,7 +8,7 @@ NF = 4
 
 mulst = np.linspace(0.65,2,60) * M_jpsi/2
 
-W_ref = Evo_WilsonCoef_SG(M_jpsi/2,NF,p_order=3)[1]
+W_ref = Evo_WilsonCoef_SG(M_jpsi/2,NF,p_order=3)[0] + Evo_WilsonCoef_SG(M_jpsi/2,NF,p_order=3)[1]
 
 Wp1lst = np.array([Evo_WilsonCoef_SG(mu,NF,p_order=1)/W_ref for mu in mulst ])
 
