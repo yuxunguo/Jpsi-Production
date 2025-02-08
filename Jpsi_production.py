@@ -354,7 +354,7 @@ def fit(str):
     
     plt.savefig(f'Output/{str}/Exp_Compare.png')
     plt.close('all')
-'''
+
 INCLUDE_XSEC = False
 P_ORDER = 1
 fit("lattice_only")
@@ -369,7 +369,7 @@ INCLUDE_XSEC = True
 P_ORDER = 2
 fit("lattice_NLOexp")
 print("Lattice + NLO experimental data fit and plot finished...")
-'''
+
 
 def chi2_exp(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, A_pole: int, C_pole: int):
 
@@ -494,10 +494,9 @@ def fit_exponly(str):
     plt.savefig(f'Output/{str}/Exp_Compare.png')
     plt.close('all')
 
-'''
+
 P_ORDER = 1
 fit_exponly("Exp_only_LO")
 
 P_ORDER = 2
 fit_exponly("Exp_only_NLO")
-'''

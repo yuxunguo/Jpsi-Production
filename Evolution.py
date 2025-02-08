@@ -786,6 +786,11 @@ def Evo_WilsonCoef_SG(mu: float,nf: int, p:int = 1, p_order: int =1):
     CWj0qNLO = alphaS * (cq1 - 10/9/np.pi* 2 * log(m_charm/mu))
     CWj0gNLO = alphaS * (cg1 - 55/16/np.pi * 2 * log(m_charm/mu))
     CWj0NLO = [CWj0qNLO, CWj0gNLO]
+
+    # Fixing the -1 glue prefactor
+    glufact = np.array([1,-1])
+    CWj0LO = np.einsum('i,i->i',CWj0LO,glufact)
+    CWj0NLO = np.einsum('i,i->i',CWj0NLO,glufact)
     
     CWevo0 = alphaS * np.einsum('ij,j->i',evola0,CWj0LO)
     
