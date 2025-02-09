@@ -200,10 +200,11 @@ def chi2(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float,
     chi2Ag = np.sum( ((Aglst-Ag_mean)/Ag_err) ** 2 )
     chi2Dg = np.sum( ((Dglst-Dg_mean)/Dg_err) ** 2 )
 
+    uncertain_fact = 1/(1.8) ** 2
     # Two variables Wt[0] = W, Wt[1] = |t| = -t
     if(INCLUDE_XSEC):
         dsigma_pred=list(map(lambda Wt: dsigma_New(Wt[0], -Wt[1], Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order = P_ORDER), zip(dsigmadata_select[:,0], dsigmadata_select[:,1])))
-        chi2dsigma = np.sum(((dsigma_pred - dsigmadata_select[:,2]) / dsigmadata_select[:,3]) **2 )
+        chi2dsigma = uncertain_fact * np.sum(((dsigma_pred - dsigmadata_select[:,2]) / dsigmadata_select[:,3]) **2 )
     else:
         chi2dsigma = 0
     #return chi2Aq + chi2Dq + chi2Ag + chi2Dg # Fitting only to lattice 
@@ -218,13 +219,13 @@ def fit(str):
     m.fixed["C_pole"] = True
 
     m.limits["Ag0"] = (0,1)
-    m.limits["MAg"] = (0,5)
+    m.limits["MAg"] = (0,4)
     m.limits["Cg0"] = (-5,5)
-    m.limits["MCg"] = (0,5)
+    m.limits["MCg"] = (0,4)
     m.limits["Aq0"] = (0,1)
-    m.limits["MAq"] = (0,5)
+    m.limits["MAq"] = (0,4)
     m.limits["Cq0"] = (-5,5)
-    m.limits["MCq"] = (0,5)
+    m.limits["MCq"] = (0,4)
 
     m.migrad()
     m.hesse()
@@ -395,13 +396,13 @@ def fit_exponly(str):
         m.fixed["MCq"] = True
         
     m.limits["Ag0"] = (0,1)
-    m.limits["MAg"] = (0,5)
+    m.limits["MAg"] = (0,4)
     m.limits["Cg0"] = (-5,5)
-    m.limits["MCg"] = (0,5)
+    m.limits["MCg"] = (0,4)
     m.limits["Aq0"] = (0,1)
-    m.limits["MAq"] = (0,5)
+    m.limits["MAq"] = (0,4)
     m.limits["Cq0"] = (-5,5)
-    m.limits["MCq"] = (0,5)
+    m.limits["MCq"] = (0,4)
 
     m.migrad()
     m.hesse()
