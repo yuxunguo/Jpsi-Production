@@ -75,8 +75,23 @@ def G2_New(W: float, t: float, Ag0: float, MAg: float, Cg0: float, MCg: float, A
     
     return (1-xi ** 2) * (HCFF + ECFF) ** 2 - 2 * ECFF * (HCFF+ECFF) + (1- t/ (4 * Mproton ** 2))* ECFF ** 2
 
+def G2_New_test(W: float, t: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, mufact:float, P_order: int = 1, A_pole: int = 2, C_pole: int = 3): 
+    xi = Xi(W ,t)
+    [gHCFF, gECFF] = 2*ComptonFormFactors(t, Ag0, MAg, Cg0, MCg, xi, A_pole, C_pole) / xi ** 2
+    [qHCFF, qECFF] = 2*ComptonFormFactors(t, Aq0, MAq, Cq0, MCq, xi, A_pole, C_pole) / xi ** 2
+    
+    CWS, CWG = np.real(Evo_WilsonCoef_SG(mufact*Mcharm,NF,p = 1,p_order= P_order))
+    
+    HCFF = CWG * gHCFF + CWS * qHCFF
+    ECFF = CWG * gECFF + CWS * qECFF
+    
+    return (1-xi ** 2) * (HCFF + ECFF) ** 2 - 2 * ECFF * (HCFF+ECFF) + (1- t/ (4 * Mproton ** 2))* ECFF ** 2
+
 def dsigma_New(W: float, t: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, P_order = 1, A_pole: int = 2, C_pole: int = 3):
     return 1/conv * alphaEM * (2/3) **2 /(4* (W ** 2 - Mproton ** 2) ** 2) * (16 * np.pi) ** 2/ (3 * MJpsi ** 3) * psi2 * G2_New(W, t, Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order, A_pole, C_pole)
+
+def dsigma_New_test(W: float, t: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, mufact: float, P_order = 1, A_pole: int = 2, C_pole: int = 3):
+    return 1/conv * alphaEM * (2/3) **2 /(4* (W ** 2 - Mproton ** 2) ** 2) * (16 * np.pi) ** 2/ (3 * MJpsi ** 3) * psi2 * G2_New_test(W, t, Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, mufact, P_order, A_pole, C_pole)
 
 def sigma_New(W: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, P_order = 1, A_pole: int = 2, C_pole: int = 3):
     return quad(lambda u: dsigma(W, u, Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order, A_pole, C_pole), tmin(W), tmax(W))[0]
