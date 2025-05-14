@@ -75,8 +75,23 @@ def G2_New(W: float, t: float, Ag0: float, MAg: float, Cg0: float, MCg: float, A
     
     return (1-xi ** 2) * (HCFF + ECFF) ** 2 - 2 * ECFF * (HCFF+ECFF) + (1- t/ (4 * Mproton ** 2))* ECFF ** 2
 
+def G2_New_test(W: float, t: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, mufact:float, P_order: int = 1, A_pole: int = 2, C_pole: int = 3): 
+    xi = Xi(W ,t)
+    [gHCFF, gECFF] = 2*ComptonFormFactors(t, Ag0, MAg, Cg0, MCg, xi, A_pole, C_pole) / xi ** 2
+    [qHCFF, qECFF] = 2*ComptonFormFactors(t, Aq0, MAq, Cq0, MCq, xi, A_pole, C_pole) / xi ** 2
+    
+    CWS, CWG = np.real(Evo_WilsonCoef_SG(mufact*Mcharm,NF,p = 1,p_order= P_order))
+    
+    HCFF = CWG * gHCFF + CWS * qHCFF
+    ECFF = CWG * gECFF + CWS * qECFF
+    
+    return (1-xi ** 2) * (HCFF + ECFF) ** 2 - 2 * ECFF * (HCFF+ECFF) + (1- t/ (4 * Mproton ** 2))* ECFF ** 2
+
 def dsigma_New(W: float, t: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, P_order = 1, A_pole: int = 2, C_pole: int = 3):
     return 1/conv * alphaEM * (2/3) **2 /(4* (W ** 2 - Mproton ** 2) ** 2) * (16 * np.pi) ** 2/ (3 * MJpsi ** 3) * psi2 * G2_New(W, t, Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order, A_pole, C_pole)
+
+def dsigma_New_test(W: float, t: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, mufact: float, P_order = 1, A_pole: int = 2, C_pole: int = 3):
+    return 1/conv * alphaEM * (2/3) **2 /(4* (W ** 2 - Mproton ** 2) ** 2) * (16 * np.pi) ** 2/ (3 * MJpsi ** 3) * psi2 * G2_New_test(W, t, Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, mufact, P_order, A_pole, C_pole)
 
 def sigma_New(W: float, Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, P_order = 1, A_pole: int = 2, C_pole: int = 3):
     return quad(lambda u: dsigma(W, u, Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order, A_pole, C_pole), tmin(W), tmax(W))[0]
@@ -200,10 +215,11 @@ def chi2(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float,
     chi2Ag = np.sum( ((Aglst-Ag_mean)/Ag_err) ** 2 )
     chi2Dg = np.sum( ((Dglst-Dg_mean)/Dg_err) ** 2 )
 
+    uncertain_fact = 1/(1.8) ** 2
     # Two variables Wt[0] = W, Wt[1] = |t| = -t
     if(INCLUDE_XSEC):
         dsigma_pred=list(map(lambda Wt: dsigma_New(Wt[0], -Wt[1], Ag0, MAg, Cg0, MCg, Aq0, MAq, Cq0, MCq, P_order = P_ORDER), zip(dsigmadata_select[:,0], dsigmadata_select[:,1])))
-        chi2dsigma = np.sum(((dsigma_pred - dsigmadata_select[:,2]) / dsigmadata_select[:,3]) **2 )
+        chi2dsigma = uncertain_fact * np.sum(((dsigma_pred - dsigmadata_select[:,2]) / dsigmadata_select[:,3]) **2 )
     else:
         chi2dsigma = 0
     #return chi2Aq + chi2Dq + chi2Ag + chi2Dg # Fitting only to lattice 
@@ -218,13 +234,13 @@ def fit(str):
     m.fixed["C_pole"] = True
 
     m.limits["Ag0"] = (0,1)
-    m.limits["MAg"] = (0,5)
+    m.limits["MAg"] = (0,4)
     m.limits["Cg0"] = (-5,5)
-    m.limits["MCg"] = (0,5)
+    m.limits["MCg"] = (0,4)
     m.limits["Aq0"] = (0,1)
-    m.limits["MAq"] = (0,5)
+    m.limits["MAq"] = (0,4)
     m.limits["Cq0"] = (-5,5)
-    m.limits["MCq"] = (0,5)
+    m.limits["MCq"] = (0,4)
 
     m.migrad()
     m.hesse()
@@ -354,7 +370,7 @@ def fit(str):
     
     plt.savefig(f'Output/{str}/Exp_Compare.png')
     plt.close('all')
-'''
+
 INCLUDE_XSEC = False
 P_ORDER = 1
 fit("lattice_only")
@@ -369,7 +385,7 @@ INCLUDE_XSEC = True
 P_ORDER = 2
 fit("lattice_NLOexp")
 print("Lattice + NLO experimental data fit and plot finished...")
-'''
+
 
 def chi2_exp(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, A_pole: int, C_pole: int):
 
@@ -395,13 +411,13 @@ def fit_exponly(str):
         m.fixed["MCq"] = True
         
     m.limits["Ag0"] = (0,1)
-    m.limits["MAg"] = (0,5)
+    m.limits["MAg"] = (0,4)
     m.limits["Cg0"] = (-5,5)
-    m.limits["MCg"] = (0,5)
+    m.limits["MCg"] = (0,4)
     m.limits["Aq0"] = (0,1)
-    m.limits["MAq"] = (0,5)
+    m.limits["MAq"] = (0,4)
     m.limits["Cq0"] = (-5,5)
-    m.limits["MCq"] = (0,5)
+    m.limits["MCq"] = (0,4)
 
     m.migrad()
     m.hesse()
@@ -494,10 +510,9 @@ def fit_exponly(str):
     plt.savefig(f'Output/{str}/Exp_Compare.png')
     plt.close('all')
 
-'''
+
 P_ORDER = 1
 fit_exponly("Exp_only_LO")
 
 P_ORDER = 2
 fit_exponly("Exp_only_NLO")
-'''
