@@ -134,15 +134,15 @@ Aq_err = np.sqrt(AqDq_diag[:34])
 Dq_err = np.sqrt(AqDq_diag[34:])
 
 #print(dsigma(WEb(8.78),-3,Ag0lat,MAglat,Cg0lat,MCglat)/alphaS**2 * AlphaS(2,NF,Mcharm)**2)
-Ag0lat = 0.4776
-MAglat = 1.6746
-Cg0lat = -0.1171
-MCglat = 3.0829
+Ag0lat = 0.48
+MAglat = 1.12
+Cg0lat = -0.46
+MCglat = 0.83
 
-Aq0lat = 0.5
-MAqlat = 2.0179
-Cq0lat = -0.2245
-MCqlat = 1.9515
+Aq0lat = 0.53
+MAqlat = 1.50
+Cq0lat = -0.27
+MCqlat = 1.18
 
 #Read the csv into dataframe using pandas
 dsigmadata = pd.read_csv("2022-final-xsec-electron-channel_total.csv")
@@ -177,7 +177,6 @@ with open("dsigmadata_select.csv", "w", newline="") as file:
     writer = csv.writer(file)
     writer.writerows(dsigmadata_select)
 
-
 #
 # Total cross-sections (Not fitted)
 #
@@ -195,6 +194,61 @@ totsigmadata_reshape =  np.column_stack((avg_W_col_sigma,sigma_col_sigma,sigma_e
 INCLUDE_XSEC = False
 
 P_ORDER = 1
+
+'''
+# Lat only
+Ag0map = 0.48
+MAgmap = 1.12
+Cg0map = -0.46
+MCgmap = 0.83
+
+Aq0map = 0.53
+MAqmap = 1.50
+Cq0map = -0.27
+MCqmap = 1.18
+
+# Lat+exp
+
+Ag0map = 0.47
+MAgmap = 1.27
+Cg0map = -0.51
+MCgmap = 0.80
+
+Aq0map = 0.53
+MAqmap = 1.48
+Cq0map = -0.23
+MCqmap = 1.29
+
+# Exp only
+
+Ag0map = 0.4
+MAgmap = 1.95
+Cg0map = -0.12
+MCgmap = 2.59
+
+Aq0map = 0.6
+MAqmap = 0.1
+Cq0map = 0.14
+MCqmap = 2.59
+
+mulist = np.linspace(1/Mcharm,2.,5000)
+
+dsdt_mudep=[]
+for mu in mulist:
+    dsdt_mudep.append(list(map(lambda Wt: dsigma_New_test(Wt[0], -Wt[1], Ag0map, MAgmap, Cg0map, MCgmap, Aq0map, MAqmap, Cq0map, MCqmap, mu, P_order = P_ORDER), zip(dsigmadata_select[:,0], dsigmadata_select[:,1]))))
+
+dsdt_mudep_sample = np.transpose(np.array(dsdt_mudep))
+
+dsdt_row_means = np.mean(dsdt_mudep_sample, axis=1)
+dsdt_row_stds = np.std(dsdt_mudep_sample, axis=1)
+
+dsdt_row_rel_stds = dsdt_row_stds/dsdt_row_means
+
+print(dsdt_row_rel_stds)
+print(np.min(dsdt_row_rel_stds))
+print(np.max(dsdt_row_rel_stds))
+'''
+
 
 def chi2(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, A_pole: int, C_pole: int):
 
@@ -370,12 +424,23 @@ def fit(str):
     
     plt.savefig(f'Output/{str}/Exp_Compare.png')
     plt.close('all')
+    
+    dsigma_pred_array = np.array(dsigma_pred_all).reshape(-1,1)
+    dsigmadata_tot = np.concatenate((dsigmadata_reshape, dsigma_pred_array), axis=1)
+    dsigma_DF = pd.DataFrame(dsigmadata_tot)
+    dsigma_DF.to_csv(f'Output/{str}/Exp_All.csv')
+    
 
 INCLUDE_XSEC = False
 P_ORDER = 1
-fit("lattice_only")
+fit("lattice_only_LO")
 print("Lattice only fit and plot finished...")
 
+INCLUDE_XSEC = False
+P_ORDER = 2
+fit("lattice_only_NLO")
+print("Lattice only fit and plot finished...")
+'''
 INCLUDE_XSEC = True
 P_ORDER = 1
 fit("lattice_LOexp")
@@ -385,7 +450,7 @@ INCLUDE_XSEC = True
 P_ORDER = 2
 fit("lattice_NLOexp")
 print("Lattice + NLO experimental data fit and plot finished...")
-
+'''
 
 def chi2_exp(Ag0: float, MAg: float, Cg0: float, MCg: float, Aq0: float, MAq: float, Cq0: float, MCq: float, A_pole: int, C_pole: int):
 
@@ -510,9 +575,10 @@ def fit_exponly(str):
     plt.savefig(f'Output/{str}/Exp_Compare.png')
     plt.close('all')
 
-
+'''
 P_ORDER = 1
 fit_exponly("Exp_only_LO")
 
 P_ORDER = 2
 fit_exponly("Exp_only_NLO")
+'''
